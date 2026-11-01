@@ -1,7 +1,13 @@
 # Car Cam
 
-A video-only viewer for the camera on an NQD Wi-Fi drift car. Open it and the
-camera fills the screen. There are no controls, accounts or cloud services.
+A video-only viewer for the camera on the **NQD 1:64 Desktop Drift** camera car,
+which carries an **FPV BOX HD 1080** camera on its roof. Open the app and the
+camera fills the screen. There are no driving controls, accounts or cloud
+services.
+
+| The car and camera | The box |
+| --- | --- |
+| ![Yellow NQD drift car with a black FPV BOX HD 1080 camera on its roof](docs/images/car-with-camera.jpg) | ![NQD Desktop Drift 1:64 box showing four camera cars](docs/images/box.jpg) |
 
 This is an independent project for owners of the car, and isn't affiliated with
 or endorsed by the manufacturer.
