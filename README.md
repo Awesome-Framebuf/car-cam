@@ -12,9 +12,19 @@ services.
 This is an independent project for owners of the car, and isn't affiliated with
 or endorsed by the manufacturer.
 
+## Versions
+
+| | v1 | v2 |
+| --- | --- | --- |
+| Live video | Yes | Yes |
+| Take photos | No | Yes |
+| Record video | No | Yes |
+| Connection guide in the app | No | Yes |
+| Download | [v1.0.0](../../releases/tag/v1.0.0) | Coming soon, still in testing |
+
 ## Install
 
-Download the files from the [latest release](../../releases/tag/latest).
+Download the files for the version you want from the table above.
 
 **Android:** install `CarCam.apk`. New builds install over old ones.
 
