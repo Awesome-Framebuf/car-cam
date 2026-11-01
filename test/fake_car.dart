@@ -68,9 +68,13 @@ class FakeCar {
 
   int get port => _socket.port;
 
+  /// While true the car ignores everything, as if it were switched off.
+  bool silent = false;
+
   void _read() {
     Datagram? d;
     while ((d = _socket.receive()) != null) {
+      if (silent) continue;
       final p = d!.data;
       if (p.length == 4 && p[0] == 0xEF && p[1] == 0x00) {
         helloCount++;

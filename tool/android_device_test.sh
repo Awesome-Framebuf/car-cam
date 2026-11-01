@@ -28,6 +28,21 @@ if ! flutter test integration_test/capture_test.dart -d emulator-5554; then
   exit 1
 fi
 
+# Screenshots of the running app against a simulated car: the test holds each
+# screen for a while, and the best shots are picked by eye for the website.
+adb shell settings put system accelerometer_rotation 0 || true
+mkdir -p "$OUT/shots"
+(
+  while true; do
+    adb exec-out screencap -p > "$OUT/shots/$(date +%s).png" || true
+    sleep 4
+  done
+) &
+SHOT_PID=$!
+trap 'kill "$GRANT_PID" "$SHOT_PID" 2>/dev/null || true' EXIT
+flutter test integration_test/screens_test.dart -d emulator-5554
+kill "$SHOT_PID" 2>/dev/null || true
+
 adb shell content query --uri content://media/external/video/media \
   --projection _display_name:duration:width:height:_size | tee "$OUT/videos.txt"
 adb shell content query --uri content://media/external/images/media \

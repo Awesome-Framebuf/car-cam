@@ -26,7 +26,10 @@ void main() {
 }
 
 class VideoScreen extends StatefulWidget {
-  const VideoScreen({super.key});
+  const VideoScreen({super.key, this.client});
+
+  /// Where the video comes from: the real car unless a test supplies another.
+  final CarVideoClient? client;
 
   @override
   State<VideoScreen> createState() => _VideoScreenState();
@@ -35,7 +38,7 @@ class VideoScreen extends StatefulWidget {
 class _VideoScreenState extends State<VideoScreen> with WidgetsBindingObserver {
   static const _stalledAfter = Duration(seconds: 2);
 
-  final _client = CarVideoClient();
+  late final CarVideoClient _client;
   final _capture = const CaptureService();
   final _recordingClock = Stopwatch();
   StreamSubscription<Uint8List>? _subscription;
@@ -54,6 +57,7 @@ class _VideoScreenState extends State<VideoScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _client = widget.client ?? CarVideoClient();
     _subscription = _client.frames.listen(_onFrame);
     _client.start();
     _statusTimer = Timer.periodic(

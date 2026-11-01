@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Car Cam</title>
+<meta name="description" content="A free video viewer for the NQD 1:64 Desktop Drift camera car, for Android and iPhone.">
+<style>
+:root {
+  --bg: #0e1116; --panel: #181d25; --line: #2a313c; --text: #f2f4f7; --dim: #a7b0bd;
+  --accent: #e8f02a; --accent-ink: #14160a; --warn: #ffb547;
+}
+@media (prefers-color-scheme: light) {
+  :root { --bg: #f5f6f3; --panel: #fff; --line: #dcdfd8; --text: #15181c; --dim: #59616c;
+    --accent: #d7df12; --warn: #8a5a00; }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.55;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+nav { display: flex; gap: 18px; align-items: center; padding: 16px 0; flex-wrap: wrap; }
+nav b { margin-right: auto; font-size: 18px; letter-spacing: .02em; }
+nav a { color: var(--dim); text-decoration: none; font-size: 15px; }
+nav a:hover { color: var(--text); }
+.hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 32px; align-items: center; padding: 24px 0 48px; }
+h1 { font-size: clamp(34px, 6vw, 56px); line-height: 1.08; margin: 0 0 16px; letter-spacing: -.02em; }
+.lead { font-size: 19px; color: var(--dim); margin: 0 0 24px; }
+.hero img { border-radius: 16px; width: 100%; }
+.btn { display: inline-block; background: var(--accent); color: var(--accent-ink); font-weight: 700;
+  padding: 12px 20px; border-radius: 10px; text-decoration: none; }
+.btn.alt { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 600; }
+.btns { display: flex; gap: 10px; flex-wrap: wrap; }
+section { padding: 40px 0; border-top: 1px solid var(--line); }
+h2 { font-size: 28px; margin: 0 0 8px; letter-spacing: -.01em; }
+.sub { color: var(--dim); margin: 0 0 24px; max-width: 68ch; }
+.grid { display: grid; gap: 16px; }
+.two { grid-template-columns: repeat(2, 1fr); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.card h3 { margin: 0 0 4px; font-size: 19px; }
+.tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--accent-ink);
+  background: var(--accent); border-radius: 6px; padding: 2px 8px; margin-left: 6px; vertical-align: 2px; }
+.meta { color: var(--dim); font-size: 14px; margin: 0 0 14px; }
+.qrs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.qr { text-align: center; font-size: 14px; }
+.qr img { width: 100%; max-width: 190px; margin: 0 auto 8px; border-radius: 8px; background: #fff; }
+.note { color: var(--dim); font-size: 14px; margin: 14px 0 0; }
+figure { margin: 0; }
+figure img { border-radius: 10px; width: 100%; border: 1px solid var(--line); }
+figcaption { color: var(--dim); font-size: 14px; margin-top: 8px; }
+.notice { border-left: 3px solid var(--warn); padding: 8px 14px; margin: 0 0 22px; color: var(--dim); max-width: 72ch; }
+.video { position: relative; display: block; width: 100%; padding: 0; border: 0; background: #000; cursor: pointer;
+  border-radius: 10px; overflow: hidden; aspect-ratio: 16 / 9; }
+.video img { width: 100%; height: 100%; object-fit: cover; opacity: .85; }
+.video span { position: absolute; inset: 0; margin: auto; width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(0,0,0,.72); color: #fff; font-size: 26px; display: grid; place-items: center; }
+.video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+ol.steps { padding-left: 20px; margin: 0; }
+ol.steps li { margin-bottom: 8px; }
+footer { color: var(--dim); font-size: 14px; padding: 28px 0 40px; border-top: 1px solid var(--line); }
+@media (max-width: 760px) {
+  .hero, .two { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <b>Car Cam</b>
+    <a href="#download">Download</a>
+    <a href="#app">The app</a>
+    <a href="#car">The car</a>
+    <a href="#videos">Videos</a>
+    <a href="https://github.com/Awesome-Framebuf/car-cam">GitHub</a>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <h1>See what your tiny car sees.</h1>
+      <p class="lead">A free viewer for the camera on the NQD 1:64 Desktop Drift car. Open it and the picture fills your screen, with photos and video recording built in. No account, and no driving controls.</p>
+      <div class="btns">
+        <a class="btn" href="#download">Download <span data-latest>v2.0.0</span></a>
+        <a class="btn alt" href="https://github.com/Awesome-Framebuf/car-cam/blob/main/docs/CONNECTING.md">Connection guide</a>
+      </div>
+    </div>
+    <img src="images/car.jpg" width="680" height="800" alt="Yellow NQD 1:64 drift car with a black FPV BOX HD 1080 camera on its roof">
+  </header>
+
+  <section id="download">
+    <h2>Download</h2>
+    <p class="sub">Scan a code with your phone's camera, or tap a link.</p>
+    <div class="grid two" id="versions">
+      <article class="card">
+        <h3>v2.0.0 <span class="tag">Latest</span></h3>
+        <p class="meta">Live video, photos, recording and a connection guide</p>
+        <div class="qrs">
+          <div class="qr"><img src="images/qr/v2.0.0-android.png" width="270" height="270" alt="QR code for the v2.0.0 Android app"><a href="https://github.com/Awesome-Framebuf/car-cam/releases/download/v2.0.0/CarCam.apk">Android APK</a></div>
+          <div class="qr"><img src="images/qr/v2.0.0-iphone.png" width="294" height="294" alt="QR code for the v2.0.0 iPhone file"><a href="https://github.com/Awesome-Framebuf/car-cam/releases/download/v2.0.0/CarCam-unsigned.ipa">iPhone IPA</a></div>
+        </div>
+      </article>
+      <article class="card">
+        <h3>v1.0.0</h3>
+        <p class="meta">Live video only</p>
+        <div class="qrs">
+          <div class="qr"><img src="images/qr/v1.0.0-android.png" width="270" height="270" alt="QR code for the v1.0.0 Android app"><a href="https://github.com/Awesome-Framebuf/car-cam/releases/download/v1.0.0/CarCam.apk">Android APK</a></div>
+          <div class="qr"><img src="images/qr/v1.0.0-iphone.png" width="294" height="294" alt="QR code for the v1.0.0 iPhone file"><a href="https://github.com/Awesome-Framebuf/car-cam/releases/download/v1.0.0/CarCam-unsigned.ipa">iPhone IPA</a></div>
+        </div>
+      </article>
+    </div>
+    <p class="note" id="release-line"><a href="https://github.com/Awesome-Framebuf/car-cam/releases">All releases on GitHub</a></p>
+    <p class="note"><strong>iPhone:</strong> the code only downloads the file. iPhones install it after you sign it with a tool like AltStore or Sideloadly. <strong>Android:</strong> you may need to allow installs from your browser, and to uninstall an older version first.</p>
+  </section>
+
+  <section id="start">
+    <h2>Three steps</h2>
+    <ol class="steps">
+      <li>Turn on the car and wait a few seconds.</li>
+      <li>Join the car's Wi-Fi on your phone.</li>
+      <li>Open Car Cam. The video starts by itself.</li>
+    </ol>
+    <p class="note">Stuck? The <a href="https://github.com/Awesome-Framebuf/car-cam/blob/main/docs/CONNECTING.md">connection guide</a> covers the usual fixes.</p>
+  </section>
+
+  <section id="app">
+    <h2>Inside the app</h2>
+    <p class="sub">Captured from the real app running in our automated tests. The picture comes from a simulated car, so it's a labelled test image and not real footage.</p>
+    <div class="grid two" id="app-shots">
+      <figure><img src="images/app/iphone-guide.jpg" width="1100" height="506" loading="lazy" alt="The connection guide appears until the car answers."><figcaption>The connection guide appears until the car answers. <em>iPhone simulator.</em></figcaption></figure>
+      <figure><img src="images/app/iphone-live.jpg" width="1100" height="506" loading="lazy" alt="Live video, with the photo and record buttons."><figcaption>Live video, with the photo and record buttons. <em>iPhone simulator.</em></figcaption></figure>
+      <figure><img src="images/app/iphone-photo.jpg" width="1100" height="506" loading="lazy" alt="Taking a photo saves it straight to your library."><figcaption>Taking a photo saves it straight to your library. <em>iPhone simulator.</em></figcaption></figure>
+      <figure><img src="images/app/iphone-recording.jpg" width="1100" height="506" loading="lazy" alt="A red timer runs while you record."><figcaption>A red timer runs while you record. <em>iPhone simulator.</em></figcaption></figure>
+      <figure><img src="images/app/android-recording.jpg" width="640" height="320" loading="lazy" alt="Recording on Android."><figcaption>Recording on Android. <em>Android 13 emulator.</em></figcaption></figure>
+      <figure><img src="images/app/android-saved.jpg" width="640" height="320" loading="lazy" alt="The finished video goes to your gallery."><figcaption>The finished video goes to your gallery. <em>Android 13 emulator.</em></figcaption></figure>
+    </div>
+  </section>
+
+  <section id="car">
+    <h2>The car and the box</h2>
+    <p class="sub">Car Cam is made for this car: the NQD 1:64 Desktop Drift, with the FPV BOX HD 1080 camera on its roof. If your box looks like this, you're in the right place.</p>
+    <div class="grid two">
+      <figure><img src="images/car.jpg" width="680" height="800" alt="The yellow car with its roof camera"><figcaption>The car and camera, photographed by the project's owner.</figcaption></figure>
+      <figure><img src="images/box.jpg" width="708" height="800" alt="NQD Desktop Drift 1:64 box showing four camera cars"><figcaption>The box.</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="videos">
+    <h2>Cars like this on video</h2>
+    <p class="notice"><strong>These aren't this exact car.</strong> We couldn't find a video of it yet, so these show similar tiny camera cars from other makers, and Car Cam may not work with them. We chose them from their titles and thumbnails, not from watching them.</p>
+    <div class="grid two">
+      <article class="card">
+        <button class="video" data-id="Bl5E5dLEx6A" aria-label="Play: Unbelievable FPV RC Drift Car for Just $20!"><img src="images/video-wltoys-6401.jpg" alt="" loading="lazy"><span aria-hidden="true">▶</span></button>
+        <h3 style="margin-top:12px">Unbelievable FPV RC Drift Car for Just $20!</h3>
+        <p class="meta">WLtoys 6401 · <a href="https://www.youtube.com/watch?v=Bl5E5dLEx6A">X-WING FPV &amp; RC on YouTube</a></p>
+      </article>
+      <article class="card">
+        <button class="video" data-id="KDDO4m1SalY" aria-label="Play: WL Mini RC Car with HD FPV Camera"><img src="images/video-wl-mini.jpg" alt="" loading="lazy"><span aria-hidden="true">▶</span></button>
+        <h3 style="margin-top:12px">WL Mini RC Car with HD FPV Camera</h3>
+        <p class="meta">WL mini car · <a href="https://www.youtube.com/watch?v=KDDO4m1SalY">US MART on YouTube</a></p>
+      </article>
+    </div>
+    <p class="note">More to browse on TikTok: <a href="https://www.tiktok.com/discover/mini-fpv-rc-car">mini FPV RC cars</a> and <a href="https://www.tiktok.com/discover/tiny-rc-cars-with-camera">tiny RC cars with cameras</a>.</p>
+  </section>
+
+  <footer>
+    An independent project for owners of the car, not affiliated with or endorsed by the manufacturer. Video thumbnails and players belong to their creators.
+    <a href="https://github.com/Awesome-Framebuf/car-cam">Source on GitHub</a>.
+  </footer>
+</div>
+<script>
+// Load a YouTube player only when asked, so visiting this page contacts nobody else.
+document.querySelectorAll('.video').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var f = document.createElement('iframe');
+    f.src = 'https://www.youtube-nocookie.com/embed/' + b.dataset.id + '?autoplay=1';
+    f.title = b.getAttribute('aria-label');
+    f.allow = 'autoplay; encrypted-media; picture-in-picture';
+    f.allowFullscreen = true;
+    b.replaceChildren(f);
+  });
+});
+// Keep the version current from GitHub. The page above already works without this.
+fetch('https://api.github.com/repos/Awesome-Framebuf/car-cam/releases')
+  .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+  .then(function (rs) {
+    var v = rs.filter(function (r) { return /^v\d/.test(r.tag_name) && !r.draft; })
+      .sort(function (a, b) { return b.tag_name.localeCompare(a.tag_name, undefined, { numeric: true }); })[0];
+    if (!v) return;
+    document.querySelectorAll('[data-latest]').forEach(function (e) { e.textContent = v.tag_name; });
+    var d = new Date(v.published_at).toLocaleDateString(undefined, { dateStyle: 'medium' });
+    var line = document.getElementById('release-line');
+    line.textContent = 'Latest on GitHub: ' + v.tag_name + ', published ' + d + '. ';
+    var a = document.createElement('a');
+    a.href = v.html_url; a.textContent = 'Release page';
+    line.append(a, ' · ');
+    var all = document.createElement('a');
+    all.href = 'https://github.com/Awesome-Framebuf/car-cam/releases'; all.textContent = 'All releases';
+    line.append(all);
+  })
+  .catch(function () {});
+</script>
+</body>
+</html>
