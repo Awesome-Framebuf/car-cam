@@ -24,7 +24,15 @@ or endorsed by the manufacturer.
 
 ## Install
 
-Download the files for the version you want from the table above.
+Scan with your phone's camera to download. Version 2 is the newest.
+
+| | v2.0.0 (photos and video) | v1.0.0 (video only) |
+| --- | --- | --- |
+| **Android** | ![QR code for the v2.0.0 Android app](docs/images/qr/v2.0.0-android.png)<br>[CarCam.apk](../../releases/download/v2.0.0/CarCam.apk) | ![QR code for the v1.0.0 Android app](docs/images/qr/v1.0.0-android.png)<br>[CarCam.apk](../../releases/download/v1.0.0/CarCam.apk) |
+| **iPhone** | ![QR code for the v2.0.0 iPhone file](docs/images/qr/v2.0.0-iphone.png)<br>[CarCam-unsigned.ipa](../../releases/download/v2.0.0/CarCam-unsigned.ipa) | ![QR code for the v1.0.0 iPhone file](docs/images/qr/v1.0.0-iphone.png)<br>[CarCam-unsigned.ipa](../../releases/download/v1.0.0/CarCam-unsigned.ipa) |
+
+The iPhone code only downloads the file: it won't install until it's signed, as
+described below.
 
 **Android:** install `CarCam.apk`. If Android refuses to install it over another
 version, uninstall the old one first.
@@ -64,7 +72,7 @@ replaces the `latest` release.
 | `lib/main.dart` | Ties the app together |
 | `android/`, `ios/Runner/AppDelegate.swift` | Native H.264 recording and saving |
 | `integration_test/` | Capture tests run on emulators and simulators |
-| `tool/` | Device test scripts and the screenshot renderer |
+| `tool/` | Device test scripts, the screenshot renderer and the QR code maker |
 | `test/fake_car.dart` | Simulated car used by the tests |
 | `docs/CONNECTING.md` | The connection guide |
 | `docs/PROTOCOL.md` | The wire protocol |
