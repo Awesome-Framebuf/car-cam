@@ -1,10 +1,10 @@
 # Video protocol
 
 Worked out for interoperability by static analysis of the car's Android app.
-**This has not yet been checked against a live car.** The code is tested against
-`test/fake_car.dart`, which was written from this same document, so those tests
-show the app is self-consistent rather than that the car agrees. Field names are
-descriptive guesses where marked.
+The app has been reported working with a real car. Its automated tests use
+`test/fake_car.dart`, written from this same document, so they show the app is
+self-consistent rather than that the car agrees. Which of the two camera families
+a given car uses hasn't been recorded. Meanings marked as inferred are guesses.
 
 There's no pairing, login or encryption in the video path.
 

@@ -3,7 +3,7 @@
 A video-only viewer for the camera on the **NQD 1:64 Desktop Drift** camera car,
 which carries an **FPV BOX HD 1080** camera on its roof. Open the app and the
 camera fills the screen. There are no driving controls, accounts or cloud
-services.
+services. Version 2 can also take photos and record video.
 
 | The car and camera | The box |
 | --- | --- |
@@ -20,13 +20,14 @@ or endorsed by the manufacturer.
 | Take photos | No | Yes |
 | Record video | No | Yes |
 | Connection guide in the app | No | Yes |
-| Download | [v1.0.0](../../releases/tag/v1.0.0) | Coming soon, still in testing |
+| Download | [v1.0.0](../../releases/tag/v1.0.0) | [v2.0.0](../../releases/tag/v2.0.0) |
 
 ## Install
 
 Download the files for the version you want from the table above.
 
-**Android:** install `CarCam.apk`. New builds install over old ones.
+**Android:** install `CarCam.apk`. If Android refuses to install it over another
+version, uninstall the old one first.
 
 **iPhone:** Apple requires apps to be signed, and `CarCam-unsigned.ipa` isn't.
 Sign and install it with one of these:
@@ -38,12 +39,10 @@ Sign and install it with one of these:
 
 ## Use
 
-1. Turn the car on.
-2. Join the car's Wi-Fi on your phone.
-3. Open Car Cam.
+Turn on the car, join its Wi-Fi on your phone and open Car Cam. See the
+[connection guide](docs/CONNECTING.md) for screenshots and troubleshooting.
 
-Android may warn that the network has no internet. Choose to stay connected. On
-iPhone, allow **Local Network** access the first time you're asked.
+![Car Cam showing the camera picture, drawn here, with photo and record buttons](docs/images/live.png)
 
 ## Develop
 
@@ -60,6 +59,12 @@ replaces the `latest` release.
 | `lib/protocol/video_channel.dart` | Frame reassembly and acknowledgements |
 | `lib/protocol/jpeg_header.dart` | Generates the JPEG header older cameras omit |
 | `lib/protocol/car_video_client.dart` | Sockets and timing |
-| `lib/main.dart` | The full-screen video screen |
+| `lib/capture/capture_service.dart` | Photo and video calls to native code |
+| `lib/ui/` | The camera screen and connection guide |
+| `lib/main.dart` | Ties the app together |
+| `android/`, `ios/Runner/AppDelegate.swift` | Native H.264 recording and saving |
+| `integration_test/` | Capture tests run on emulators and simulators |
+| `tool/` | Device test scripts and the screenshot renderer |
 | `test/fake_car.dart` | Simulated car used by the tests |
+| `docs/CONNECTING.md` | The connection guide |
 | `docs/PROTOCOL.md` | The wire protocol |
