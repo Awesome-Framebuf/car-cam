@@ -56,6 +56,9 @@ mkdir -p "$OUT/shots"
   done
 ) &
 SHOT_PID=$!
+# Finishing the last test removed the app, and its permissions with it.
+xcrun simctl privacy "$UDID" grant photos-add "$BUNDLE"
+xcrun simctl privacy "$UDID" grant photos "$BUNDLE"
 flutter test integration_test/screens_test.dart -d "$UDID"
 kill "$SHOT_PID" 2>/dev/null || true
 
