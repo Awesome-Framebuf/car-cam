@@ -208,14 +208,19 @@ class CaptureChannel(private val activity: Activity, messenger: BinaryMessenger)
             if (granted) action() else result.error("permission_denied", "Storage access denied", null)
         }
         activity.requestPermissions(
-            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+            arrayOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ),
             STORAGE_REQUEST,
         )
     }
 
     fun onPermissionResult(requestCode: Int, grantResults: IntArray) {
         if (requestCode != STORAGE_REQUEST) return
-        pendingPermission?.invoke(grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED)
+        val granted = grantResults.isNotEmpty() &&
+            grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+        pendingPermission?.invoke(granted)
         pendingPermission = null
     }
 

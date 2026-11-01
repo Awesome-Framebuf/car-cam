@@ -7,9 +7,11 @@ OUT=device-output
 mkdir -p "$OUT"
 
 # Android 9 asks for storage access with a dialog no test can tap, so keep
-# granting it until the app is installed.
+# granting it until the app is installed. The dialog grants read and write
+# together, and Android only opens shared storage with both.
 (
   for _ in $(seq 1 600); do
+    adb shell pm grant "$APP" android.permission.READ_EXTERNAL_STORAGE 2>/dev/null || true
     adb shell pm grant "$APP" android.permission.WRITE_EXTERNAL_STORAGE 2>/dev/null || true
     sleep 1
   done

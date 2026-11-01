@@ -23,8 +23,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 34 uses MediaStore; 28 uses the older permission and folder path.
-        api-level: [34, 28]
+        # 30 uses MediaStore; 28 uses the older permission and folder path.
+        api-level: [30, 28]
     steps:
       - uses: actions/checkout@v4
       - name: Enable KVM
@@ -61,6 +61,8 @@ jobs:
           path: device-output/
 
   ios:
+    # macOS minutes are expensive: skip this when only Android changed.
+    if: ${{ !contains(github.event.head_commit.message, '[android only]') }}
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
