@@ -46,6 +46,19 @@ xcrun simctl spawn "$UDID" log show --last 15m --style compact \
   > "$OUT/simulator.log" 2>&1 || true
 test "$status" -eq 0
 
+# Screenshots of the running app against a simulated car.
+kill "$SHOT_PID" 2>/dev/null || true
+mkdir -p "$OUT/shots"
+(
+  while true; do
+    xcrun simctl io "$UDID" screenshot "$OUT/shots/$(date +%s).png" >/dev/null 2>&1 || true
+    sleep 4
+  done
+) &
+SHOT_PID=$!
+flutter test integration_test/screens_test.dart -d "$UDID"
+kill "$SHOT_PID" 2>/dev/null || true
+
 MEDIA="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Media/DCIM"
 find "$MEDIA" -type f | tee "$OUT/files.txt"
 find "$MEDIA" -type f \( -iname '*.mp4' -o -iname '*.mov' -o -iname '*.jpg' -o -iname '*.jpeg' \) \

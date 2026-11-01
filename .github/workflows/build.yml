@@ -3,7 +3,7 @@ name: Build
 on:
   push:
     branches: [main]
-    paths-ignore: ['**.md', 'docs/**']
+    paths-ignore: ['**.md', 'docs/**', 'site/**', 'tool/make_qr_codes.py', '.github/workflows/pages.yml']
   pull_request:
   workflow_dispatch:
 
