@@ -19,9 +19,32 @@ for runtime, entries in sorted(devices.items(), reverse=True):
 test -n "$UDID"
 xcrun simctl boot "$UDID"
 xcrun simctl bootstatus "$UDID"
+echo "Granting photo access to $BUNDLE"
 xcrun simctl privacy "$UDID" grant photos-add "$BUNDLE"
+xcrun simctl privacy "$UDID" grant photos "$BUNDLE"
 
-flutter test integration_test/capture_test.dart -d "$UDID"
+# Shows what's on screen if the test gets stuck, such as on a permission dialog.
+(
+  for minute in 3 6 9; do
+    sleep 180
+    xcrun simctl io "$UDID" screenshot "$OUT/stuck-$minute-min.png" || true
+  done
+) &
+SHOT_PID=$!
+trap 'kill "$SHOT_PID" 2>/dev/null || true' EXIT
+
+status=0
+flutter test integration_test/capture_test.dart -d "$UDID" -v > "$OUT/flutter-test.log" 2>&1 &
+TEST_PID=$!
+( sleep 720; kill "$TEST_PID" 2>/dev/null || true ) &
+WATCHDOG_PID=$!
+wait "$TEST_PID" || status=$?
+kill "$WATCHDOG_PID" 2>/dev/null || true
+tail -n 60 "$OUT/flutter-test.log"
+xcrun simctl spawn "$UDID" log show --last 15m --style compact \
+  --predicate 'subsystem == "com.apple.TCC" OR process == "Runner"' \
+  > "$OUT/simulator.log" 2>&1 || true
+test "$status" -eq 0
 
 MEDIA="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Media/DCIM"
 find "$MEDIA" -type f | tee "$OUT/files.txt"

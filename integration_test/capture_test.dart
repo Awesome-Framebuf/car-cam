@@ -19,15 +19,16 @@ void main() {
       // Gives the workflow time to grant the Android 9 storage permission.
       await Future<void>.delayed(const Duration(seconds: 5));
 
-      await capture.savePhoto(frames[0]);
+      const limit = Duration(seconds: 90);
+      await capture.savePhoto(frames[0]).timeout(limit);
 
-      await capture.startRecording();
+      await capture.startRecording().timeout(limit);
       final clock = Stopwatch()..start();
       for (var i = 0; i < 90; i++) {
         capture.addFrame(frames[(i ~/ 15) % 2], clock.elapsedMilliseconds);
         await Future<void>.delayed(const Duration(milliseconds: 33));
       }
-      final written = await capture.stopRecording();
+      final written = await capture.stopRecording().timeout(limit);
       expect(written, greaterThan(30));
     });
   });
