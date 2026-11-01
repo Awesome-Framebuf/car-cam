@@ -17,7 +17,14 @@ mkdir -p "$OUT"
 GRANT_PID=$!
 trap 'kill "$GRANT_PID" 2>/dev/null || true' EXIT
 
-flutter test integration_test/capture_test.dart -d emulator-5554
+if ! flutter test integration_test/capture_test.dart -d emulator-5554; then
+  {
+    adb shell ls -ld /sdcard /sdcard/ /storage/emulated/0 /sdcard/Pictures
+    adb shell dumpsys package "$APP" | grep -i storage
+    adb logcat -d | grep -iE 'car_cam|storage|vold|sdcardfs' | tail -n 80
+  } 2>&1 | tee "$OUT/failure.txt"
+  exit 1
+fi
 
 adb shell content query --uri content://media/external/video/media \
   --projection _display_name:duration:width:height:_size | tee "$OUT/videos.txt"

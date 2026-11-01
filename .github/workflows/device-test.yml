@@ -19,7 +19,7 @@ env:
 jobs:
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -48,6 +48,9 @@ jobs:
           api-level: ${{ matrix.api-level }}
           arch: x86_64
           target: google_apis
+          cores: 4
+          ram-size: 4096M
+          emulator-boot-timeout: 1500
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: bash tool/android_device_test.sh

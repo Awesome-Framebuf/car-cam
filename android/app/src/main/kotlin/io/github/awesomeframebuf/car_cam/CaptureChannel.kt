@@ -183,7 +183,13 @@ class CaptureChannel(private val activity: Activity, messenger: BinaryMessenger)
     ) {
         val folder = if (isVideo) Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_PICTURES
         val directory = File(Environment.getExternalStoragePublicDirectory(folder), ALBUM)
-        directory.mkdirs()
+        // Storage can take a moment to appear after the permission is granted.
+        var attempts = 0
+        while (!directory.isDirectory && !directory.mkdirs() && attempts < 20) {
+            attempts++
+            Thread.sleep(100)
+        }
+        if (!directory.isDirectory) throw IllegalStateException("Couldn't create $directory")
         val file = File(directory, name)
         FileOutputStream(file).use(write)
         MediaScannerConnection.scanFile(activity, arrayOf(file.path), arrayOf(mime), null)
