@@ -67,6 +67,8 @@
 	<true/>
 	<key>UIStatusBarHidden</key>
 	<true/>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Car Cam saves the photos and videos you take to your library.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Car Cam connects to your car over its Wi-Fi to show the camera.</string>
 </dict>

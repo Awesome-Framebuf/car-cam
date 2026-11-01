@@ -1,0 +1,75 @@
+# Runs the native photo and video code on an Android emulator and an iOS
+# simulator, then checks the files it saved.
+name: Device test
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'lib/capture/**'
+      - 'android/**'
+      - 'ios/**'
+      - 'integration_test/**'
+      - 'tool/*_device_test.sh'
+      - '.github/workflows/device-test.yml'
+
+env:
+  FLUTTER_VERSION: '3.47.9'
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        # 34 uses MediaStore; 28 uses the older permission and folder path.
+        api-level: [34, 28]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash tool/android_device_test.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-${{ matrix.api-level }}
+          path: device-output/
+
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: bash tool/ios_device_test.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios
+          path: device-output/

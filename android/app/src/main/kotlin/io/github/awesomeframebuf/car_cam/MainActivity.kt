@@ -8,6 +8,7 @@ import android.net.NetworkRequest
 import android.os.Bundle
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity : FlutterActivity() {
     private val connectivity by lazy {
@@ -26,6 +27,22 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private var capture: CaptureChannel? = null
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        capture = CaptureChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        capture?.onPermissionResult(requestCode, grantResults)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -37,6 +54,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        capture?.dispose()
         connectivity.unregisterNetworkCallback(wifiCallback)
         connectivity.bindProcessToNetwork(null)
         super.onDestroy()
