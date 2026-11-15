@@ -3,8 +3,27 @@
 Worked out for interoperability by static analysis of the car's Android app.
 The app has been reported working with a real car. Its automated tests use
 `test/fake_car.dart`, written from this same document, so they show the app is
-self-consistent rather than that the car agrees. Which of the two camera families
-a given car uses hasn't been recorded. Meanings marked as inferred are guesses.
+self-consistent rather than that the car agrees. Meanings marked as inferred are
+guesses.
+
+## Observed on a real car (2026-11-15)
+
+From a Linux PC with a USB Wi-Fi dongle on the car's network, the internet on a
+separate adapter:
+
+- Network name `757-M64 XXXXXX` (six hex digits, different per car), open, no
+  password. Other cars in the range may use another name after `757-`.
+- The car gave the PC `192.168.169.3` by DHCP and is at `192.168.169.1`.
+- **This car is BL608 on port 8800.** `EF 00 04 00` to UDP 8800 brought video
+  fragments straight away; 8801 stayed silent.
+- Fragments: `0x93`, type 1, 640x360, quality byte 50.
+- The desktop client got its first frame about 0.2 s after the hello and then
+  ran at about 17 frames per second, with acks as described below.
+- A socket pinned to the dongle with `SO_BINDTODEVICE` works, which is what lets
+  several cars, all at `192.168.169.1`, run on several dongles at once.
+
+Not yet observed: the "busy" notice, BL618 cars, and whether the hello really
+restarts the car's sequence at 1.
 
 There's no pairing, login or encryption in the video path.
 

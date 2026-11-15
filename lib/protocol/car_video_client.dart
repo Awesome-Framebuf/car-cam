@@ -10,12 +10,25 @@ class CarVideoClient {
     InternetAddress? carAddress,
     Map<CameraFamily, int>? portOverrides,
     this.listenForBusy = true,
+    this.bindDevice,
+    this.localAddress,
   }) : _carAddress = carAddress ?? InternetAddress('192.168.169.1'),
        _portOverrides = portOverrides ?? const {};
 
   final InternetAddress _carAddress;
   final Map<CameraFamily, int> _portOverrides;
   final bool listenForBusy;
+
+  /// Linux network interface to send and receive on, such as `wlan1`.
+  ///
+  /// Every car is at the same address, so with several cars on several Wi-Fi
+  /// adapters each client must be pinned to its own adapter. Null uses the
+  /// normal route.
+  final String? bindDevice;
+
+  /// Local address to bind to instead of any address. On Windows this is how
+  /// a client is pinned to one adapter.
+  final InternetAddress? localAddress;
 
   final _frames = StreamController<Uint8List>.broadcast();
   final _sockets = <RawDatagramSocket>[];
@@ -39,9 +52,10 @@ class CarVideoClient {
     for (final family in CameraFamily.values) {
       final channel = VideoChannel(family);
       final socket = await RawDatagramSocket.bind(
-        InternetAddress.anyIPv4,
+        localAddress ?? InternetAddress.anyIPv4,
         0,
       );
+      if (bindDevice != null) _bindToDevice(socket, bindDevice!);
       final port = _portOverrides[family] ?? family.port;
       socket.listen((event) {
         if (event != RawSocketEvent.read) return;
@@ -75,6 +89,18 @@ class CarVideoClient {
   }
 
   final _pumps = <void Function(int)>[];
+
+  // SO_BINDTODEVICE. Allowed for ordinary users since Linux 5.7.
+  static void _bindToDevice(RawDatagramSocket socket, String device) {
+    const solSocket = 1, soBindToDevice = 25;
+    socket.setRawOption(
+      RawSocketOption(
+        solSocket,
+        soBindToDevice,
+        Uint8List.fromList([...device.codeUnits, 0]),
+      ),
+    );
+  }
 
   int get _now => _clock.elapsedMilliseconds;
 

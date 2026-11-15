@@ -1,16 +1,22 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'capture/capture_service.dart';
+import 'desktop/desktop_app.dart';
 import 'protocol/car_video_client.dart';
 import 'ui/camera_view.dart';
 import 'ui/connect_guide.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+    runApp(const DesktopApp());
+    return;
+  }
   SystemChrome.setPreferredOrientations(const [
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
