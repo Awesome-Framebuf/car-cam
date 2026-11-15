@@ -54,6 +54,22 @@ Turn on the car, join its Wi-Fi on your phone and open Car Cam. See the
 
 ![Car Cam showing the camera picture, drawn here, with photo and record buttons](docs/images/live.png)
 
+## Linux desktop (preview)
+
+On the `desktop` branch. Built by `.github/workflows/desktop.yml` as
+`car-cam-linux-x64.tar.gz`. Unpack it and run `./install.sh`. That installs the
+app and, if needed, the driver for AIC8800D80 USB Wi-Fi dongles.
+
+- Use a second Wi-Fi adapter, such as a USB dongle, for the car. Your internet
+  stays where it is: the app joins the car through NetworkManager with
+  `never-default`, and refuses adapters that carry another network.
+- The car picker scans for networks starting with `757-`, remembers cars, and
+  lets you name them.
+- Photos go to `Pictures/Car Cam`, videos (Motion-JPEG `.avi`) to `Videos/Car Cam`.
+- VLC, OBS or a browser can open the live video at
+  `http://localhost:8808/car.mjpg`. If that port is taken the app uses the next
+  one and shows the address. A single picture is at `/car.jpg`.
+
 ## Develop
 
 ```sh

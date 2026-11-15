@@ -11,12 +11,17 @@ import 'car_session.dart';
 import 'car_store.dart';
 import 'stream_bridge.dart';
 
+/// Makes the session for a car. Tests pass one that points at a simulated car.
+typedef SessionFactory =
+    CarSession Function({required String label, String? device, StreamBridge? bridge});
+
 class DesktopApp extends StatelessWidget {
-  const DesktopApp({super.key, this.network, this.store, this.bridge});
+  const DesktopApp({super.key, this.network, this.store, this.bridge, this.sessionFactory});
 
   final CarNetwork? network;
   final CarStore? store;
   final StreamBridge? bridge;
+  final SessionFactory? sessionFactory;
 
   @override
   Widget build(BuildContext context) {
@@ -26,17 +31,23 @@ class DesktopApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal, brightness: Brightness.dark),
       ),
-      home: DesktopHome(network: network, store: store, bridge: bridge),
+      home: DesktopHome(
+        network: network,
+        store: store,
+        bridge: bridge,
+        sessionFactory: sessionFactory,
+      ),
     );
   }
 }
 
 class DesktopHome extends StatefulWidget {
-  const DesktopHome({super.key, this.network, this.store, this.bridge});
+  const DesktopHome({super.key, this.network, this.store, this.bridge, this.sessionFactory});
 
   final CarNetwork? network;
   final CarStore? store;
   final StreamBridge? bridge;
+  final SessionFactory? sessionFactory;
 
   @override
   State<DesktopHome> createState() => _DesktopHomeState();
@@ -161,7 +172,9 @@ class _DesktopHomeState extends State<DesktopHome> {
 
   Future<void> _openSession({required String label, String? device, String? ssid}) async {
     await _closeSession();
-    final s = CarSession(label: label, device: device, bridge: _bridge);
+    final s =
+        widget.sessionFactory?.call(label: label, device: device, bridge: _bridge) ??
+        CarSession(label: label, device: device, bridge: _bridge);
     _session = s;
     _sessionSsid = ssid;
     _sub = s.frames.listen(_onFrame);
