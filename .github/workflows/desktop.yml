@@ -39,3 +39,14 @@ jobs:
         with:
           name: car-cam-linux-x64
           path: car-cam-linux-x64.tar.gz
+      - name: Package the separate dongle driver installer
+        run: |
+          out=WiFi-Dongle-Install
+          mkdir -p "$out/Linux"
+          cp packaging/wifi-dongle/README.txt "$out/"
+          cp packaging/wifi-dongle/linux/install-aic8800d80.sh "$out/Linux/"
+          tar czf "$out.tar.gz" "$out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WiFi-Dongle-Install
+          path: WiFi-Dongle-Install.tar.gz

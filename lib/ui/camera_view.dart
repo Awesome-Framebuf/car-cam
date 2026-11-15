@@ -15,6 +15,8 @@ class CameraView extends StatelessWidget {
     required this.onTakePhoto,
     required this.onToggleRecording,
     required this.onHelp,
+    this.onToggleFullScreen,
+    this.isFullScreen = false,
   });
 
   final ui.Image? image;
@@ -27,19 +29,35 @@ class CameraView extends StatelessWidget {
   final VoidCallback onToggleRecording;
   final VoidCallback onHelp;
 
+  /// Desktop only. When set, shows a full-screen button and lets a double
+  /// click on the video toggle full screen. In full screen the buttons are
+  /// hidden and only the video (and the recording badge) shows.
+  final VoidCallback? onToggleFullScreen;
+  final bool isFullScreen;
+
   @override
   Widget build(BuildContext context) {
     final picture = image;
     return Stack(
       fit: StackFit.expand,
       children: [
-        const ColoredBox(color: Colors.black),
-        if (picture != null)
-          RawImage(
-            image: picture,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.low,
+        GestureDetector(
+          key: const ValueKey('camera-video'),
+          behavior: HitTestBehavior.opaque,
+          onDoubleTap: onToggleFullScreen,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const ColoredBox(color: Colors.black),
+              if (picture != null)
+                RawImage(
+                  image: picture,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.low,
+                ),
+            ],
           ),
+        ),
         IgnorePointer(
           child: AnimatedOpacity(
             opacity: isFlashing ? 0.7 : 0,
@@ -47,48 +65,66 @@ class CameraView extends StatelessWidget {
             child: const ColoredBox(color: Colors.white),
           ),
         ),
-        if (!isLive) Center(child: _StatusChip(statusText)),
+        if (!isLive)
+          IgnorePointer(child: Center(child: _StatusChip(statusText))),
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Stack(
               children: [
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: _RoundButton(
-                    icon: Icons.help_outline,
-                    tooltip: 'How to connect',
-                    size: 44,
-                    onPressed: onHelp,
+                if (!isFullScreen)
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: _RoundButton(
+                      icon: Icons.help_outline,
+                      tooltip: 'How to connect',
+                      size: 44,
+                      onPressed: onHelp,
+                    ),
                   ),
-                ),
                 if (isRecording)
                   Align(
                     alignment: Alignment.topCenter,
                     child: _RecordingBadge(recordingElapsed),
                   ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _RoundButton(
-                        icon: Icons.photo_camera,
-                        tooltip: 'Take photo',
-                        size: 68,
-                        onPressed: isLive ? onTakePhoto : null,
-                      ),
-                      const SizedBox(height: 20),
-                      _RoundButton(
-                        icon: isRecording ? Icons.stop : Icons.videocam,
-                        tooltip: isRecording ? 'Stop recording' : 'Record video',
-                        size: 68,
-                        color: isRecording ? Colors.red : null,
-                        onPressed: isLive || isRecording ? onToggleRecording : null,
-                      ),
-                    ],
+                if (onToggleFullScreen != null && !isFullScreen)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: _RoundButton(
+                      icon: Icons.fullscreen,
+                      tooltip:
+                          'Full screen (double-click the video; Esc to leave)',
+                      size: 44,
+                      onPressed: onToggleFullScreen,
+                    ),
                   ),
-                ),
+                if (!isFullScreen)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _RoundButton(
+                          icon: Icons.photo_camera,
+                          tooltip: 'Take photo',
+                          size: 68,
+                          onPressed: isLive ? onTakePhoto : null,
+                        ),
+                        const SizedBox(height: 20),
+                        _RoundButton(
+                          icon: isRecording ? Icons.stop : Icons.videocam,
+                          tooltip: isRecording
+                              ? 'Stop recording'
+                              : 'Record video',
+                          size: 68,
+                          color: isRecording ? Colors.red : null,
+                          onPressed: isLive || isRecording
+                              ? onToggleRecording
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),

@@ -8,6 +8,7 @@ import 'package:car_cam/desktop/stream_bridge.dart';
 import 'package:car_cam/protocol/car_video_client.dart';
 import 'package:car_cam/protocol/video_channel.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class FakeNetwork implements CarNetwork {
@@ -112,6 +113,44 @@ void main() {
     expect(find.textContaining('Connected on wlx1'), findsOneWidget);
     expect(find.text('Starting video…'), findsOneWidget);
     expect(store.find('757-M64 A1B2C3'), isNotNull);
+
+    // Full screen: the window is asked to fill the screen and only the video
+    // shows. Esc brings everything back; a double click toggles it too.
+    final windowCalls = <Object?>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('car_cam/window'),
+      (call) async {
+        windowCalls.add('${call.method}:${call.arguments}');
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('car_cam/window'),
+        null,
+      ),
+    );
+    await tester.tap(find.byIcon(Icons.fullscreen));
+    await tester.pump();
+    expect(windowCalls, ['setFullScreen:true']);
+    expect(find.byTooltip('Connect'), findsNothing);
+    expect(find.byTooltip('Take photo'), findsNothing);
+    expect(find.textContaining('http://localhost:188'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(windowCalls.last, 'setFullScreen:false');
+    expect(find.byTooltip('Take photo'), findsOneWidget);
+    expect(find.textContaining('http://localhost:188'), findsOneWidget);
+    final video = find.byKey(const ValueKey('camera-video'));
+    await tester.tap(video);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(video);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(windowCalls.last, 'setFullScreen:true');
+    expect(find.byTooltip('Take photo'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(windowCalls, hasLength(4));
 
     await tester.runAsync(() async {
       await tester.tap(find.byTooltip('Disconnect'));

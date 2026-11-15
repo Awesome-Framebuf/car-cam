@@ -5,11 +5,12 @@ Install (one step, asks for your password):
 
     ./install.sh
 
-This installs the app, and if your USB Wi-Fi dongle is an AIC8800D80 (for
-example the UGREEN AX900 type that first shows up as a CD drive) it also
-builds its driver and installs the rule that switches it from CD to Wi-Fi.
-Skip the driver with ./install.sh --no-driver. Remove the app with
-./install.sh --uninstall.
+This installs the app. Remove it with ./install.sh --uninstall.
+
+Car Cam needs a second Wi-Fi adapter for the car, so your internet stays
+on the first one. The installer checks that one is free. If you use the
+AIC8800D80 (AX900) USB dongle, install its driver first with the separate
+WiFi-Dongle-Install package (WiFi-Dongle/Linux/install-aic8800d80.sh).
 
 Run without installing:
 

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Car Cam for Linux: one-step installer.
 #
-#   ./install.sh               install the app, plus the AIC8800 Wi-Fi dongle
-#                              driver if it's missing
-#   ./install.sh --no-driver   install the app only
-#   ./install.sh --uninstall   remove the app (leaves the driver and your cars)
+#   ./install.sh               install the app
+#   ./install.sh --uninstall   remove the app (leaves your saved cars)
+#
+# No Wi-Fi driver is installed here. If there's no free Wi-Fi adapter for the
+# car, it says so and points to the separate WiFi-Dongle-Install package.
 #
 # Asks for your password once (sudo). Tested on Ubuntu 24.04.
 set -Eeuo pipefail
@@ -14,19 +15,12 @@ BIN_LINK=/usr/local/bin/car-cam
 DESKTOP_FILE=/usr/share/applications/car-cam.desktop
 ICON_FILE=/usr/share/icons/hicolor/256x256/apps/car-cam.png
 
-# The community AIC8800D80 driver, pinned to a commit that was tested with the
-# dongle. Checking out the full hash also verifies what was downloaded.
-DRIVER_REPO=https://github.com/kilam994/aic8800d80-linux-driver.git
-DRIVER_COMMIT=65f74ccbe982d9242afd1b3126a28fc3a77abb4f
-
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WANT_DRIVER=yes
 UNINSTALL=no
 for a in "$@"; do
   case "$a" in
-    --no-driver) WANT_DRIVER=no ;;
     --uninstall) UNINSTALL=yes ;;
-    -h|--help) sed -n 2,9p "$0"; exit 0 ;;
+    -h|--help) sed -n 2,10p "$0"; exit 0 ;;
     *) echo "Unknown option: $a" >&2; exit 2 ;;
   esac
 done
@@ -65,35 +59,30 @@ if [[ ${#pkgs[@]} -gt 0 ]]; then
 fi
 ok "System packages"
 
-# --- The USB Wi-Fi dongle driver (AIC8800D80) -------------------------------
-driver_present() {
-  modinfo aic8800_fdrv >/dev/null 2>&1 &&
-    [[ -d /lib/firmware/aic8800D80 ]] &&
-    { [[ -f /usr/lib/udev/rules.d/aic.rules ]] || [[ -f /lib/udev/rules.d/aic.rules ]]; }
-}
-
-if [[ $WANT_DRIVER == yes ]]; then
-  say "Checking the AIC8800 USB Wi-Fi dongle driver"
-  if driver_present; then
-    ok "Driver, firmware and switch rule already installed"
-  else
-    if [[ $have_apt == yes ]]; then
-      apt-get install -y git eject usb-modeswitch
+# --- A free Wi-Fi adapter for the car ---------------------------------------
+# The car is reached on a second Wi-Fi adapter, so the internet stays on the
+# first one. Drivers are not installed here; see WiFi-Dongle-Install.
+say "Checking for a free Wi-Fi adapter"
+wifi_total=0; wifi_free=0
+if command -v nmcli >/dev/null; then
+  while IFS=: read -r _dev type state conn; do
+    [[ $type == wifi ]] || continue
+    wifi_total=$((wifi_total + 1))
+    if [[ $state != connected* ]] || [[ $conn == car-* ]] || [[ $conn == 757-* ]]; then
+      wifi_free=$((wifi_free + 1))
     fi
-    work="$(mktemp -d)"
-    trap 'rm -rf "$work"' EXIT
-    say "Downloading the driver (commit ${DRIVER_COMMIT:0:7})"
-    git -c advice.detachedHead=false clone --quiet "$DRIVER_REPO" "$work/drv"
-    git -C "$work/drv" -c advice.detachedHead=false checkout --quiet "$DRIVER_COMMIT"
-    [[ "$(git -C "$work/drv" rev-parse HEAD)" == "$DRIVER_COMMIT" ]] || { echo "Driver download didn't verify." >&2; exit 1; }
-    say "Building and installing the driver (a few minutes)"
-    # The driver's own audited installer: DKMS module, firmware, the udev rule
-    # that ejects the dongle's install CD, and usb_modeswitch config.
-    (cd "$work/drv" && ./install.sh --yes)
-    if driver_present; then ok "Driver installed"; else warn "Driver install finished with warnings; replug the dongle or reboot."; fi
-  fi
-  if lsusb 2>/dev/null | grep -qiE 'a69c:57|a69c:5721'; then
-    warn "The dongle is still in CD mode. Unplug it and plug it back in."
+  done < <(nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device 2>/dev/null)
+fi
+if [[ $wifi_free -gt 0 ]]; then
+  ok "Free Wi-Fi adapter found ($wifi_total Wi-Fi in total)"
+else
+  warn "No free Wi-Fi adapter ($wifi_total Wi-Fi in use for your internet or none at all)."
+  warn "Car Cam needs a second Wi-Fi adapter, such as a USB dongle, for the car."
+  if lsusb 2>/dev/null | grep -qi 'a69c:'; then
+    warn "An AIC8800 dongle is plugged in but has no driver yet:"
+    warn "run WiFi-Dongle/Linux/install-aic8800d80.sh (the WiFi-Dongle-Install package)."
+  else
+    warn "For the AIC8800D80 (AX900) dongle, use the WiFi-Dongle-Install package."
   fi
 fi
 

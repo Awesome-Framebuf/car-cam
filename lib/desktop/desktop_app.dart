@@ -10,10 +10,14 @@ import 'car_network.dart';
 import 'car_session.dart';
 import 'car_store.dart';
 import 'stream_bridge.dart';
+import 'window_control.dart';
 
 /// Makes the session for a car. Tests pass one that points at a simulated car.
-typedef SessionFactory =
-    CarSession Function({required String label, String? device, StreamBridge? bridge});
+typedef SessionFactory = CarSession Function({
+  required String label,
+  String? device,
+  StreamBridge? bridge,
+});
 
 class DesktopApp extends StatelessWidget {
   const DesktopApp({super.key, this.network, this.store, this.bridge, this.sessionFactory});
@@ -86,12 +90,17 @@ class _DesktopHomeState extends State<DesktopHome> {
   Timer? _ticker;
   int _refreshCount = 0;
 
+  /// Video only, filling the screen. Esc, F11 or a double click leaves it.
+  bool _fullScreen = false;
+  final WindowControl _window = const WindowControl();
+
   bool get _managed => _net is! UnsupportedCarNetwork;
 
   @override
   void initState() {
     super.initState();
     _lifecycle = AppLifecycleListener(onExitRequested: _onExit);
+    HardwareKeyboard.instance.addHandler(_onKey);
     _init();
   }
 
@@ -353,7 +362,11 @@ class _DesktopHomeState extends State<DesktopHome> {
 
   void _openFolder(Directory dir) async {
     await dir.create(recursive: true);
-    final opener = Platform.isWindows ? 'explorer' : Platform.isMacOS ? 'open' : 'xdg-open';
+    final opener = Platform.isWindows
+        ? 'explorer'
+        : Platform.isMacOS
+        ? 'open'
+        : 'xdg-open';
     try {
       await Process.start(opener, [dir.path], mode: ProcessStartMode.detached);
     } catch (_) {
@@ -377,6 +390,25 @@ class _DesktopHomeState extends State<DesktopHome> {
     return list;
   }
 
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (event.logicalKey == LogicalKeyboardKey.escape && _fullScreen) {
+      _setFullScreen(false);
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.f11) {
+      _setFullScreen(!_fullScreen);
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> _setFullScreen(bool on) async {
+    if (on == _fullScreen || !mounted) return;
+    setState(() => _fullScreen = on);
+    await _window.setFullScreen(on);
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _session;
@@ -391,8 +423,8 @@ class _DesktopHomeState extends State<DesktopHome> {
     return Scaffold(
       body: Row(
         children: [
-          if (_managed) SizedBox(width: 330, child: _sidebar(context)),
-          if (_managed) const VerticalDivider(width: 1),
+          if (_managed && !_fullScreen) SizedBox(width: 330, child: _sidebar(context)),
+          if (_managed && !_fullScreen) const VerticalDivider(width: 1),
           Expanded(
             child: Column(
               children: [
@@ -407,9 +439,11 @@ class _DesktopHomeState extends State<DesktopHome> {
                     onTakePhoto: _takePhoto,
                     onToggleRecording: _toggleRecording,
                     onHelp: _showHelp,
+                    isFullScreen: _fullScreen,
+                    onToggleFullScreen: () => _setFullScreen(!_fullScreen),
                   ),
                 ),
-                _bottomBar(context),
+                if (!_fullScreen) _bottomBar(context),
               ],
             ),
           ),
@@ -466,7 +500,10 @@ class _DesktopHomeState extends State<DesktopHome> {
           child: FilledButton.tonalIcon(
             onPressed: _device == null || _scanning ? null : _scan,
             icon: _scanning
-                ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.wifi_find),
             label: Text(_scanning ? 'Scanning…' : 'Scan for cars'),
           ),
@@ -515,7 +552,11 @@ class _DesktopHomeState extends State<DesktopHome> {
           if (joining)
             const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2))
           else if (connected)
-            IconButton(tooltip: 'Disconnect', icon: const Icon(Icons.link_off), onPressed: _disconnect)
+            IconButton(
+              tooltip: 'Disconnect',
+              icon: const Icon(Icons.link_off),
+              onPressed: _disconnect,
+            )
           else
             IconButton(
               tooltip: 'Connect',
@@ -566,8 +607,7 @@ class _DesktopHomeState extends State<DesktopHome> {
               icon: const Icon(Icons.video_library_outlined, size: 18),
               label: const Text('Videos'),
             ),
-            if (_session != null)
-              Text('${_session!.label} · ${_session!.framesReceived} frames'),
+            if (_session != null) Text('${_session!.label} · ${_session!.framesReceived} frames'),
           ],
         ),
       ),
@@ -597,6 +637,7 @@ class _DesktopHomeState extends State<DesktopHome> {
   @override
   void dispose() {
     _ticker?.cancel();
+    HardwareKeyboard.instance.removeHandler(_onKey);
     _lifecycle.dispose();
     _closeSession();
     _bridge.stop();
