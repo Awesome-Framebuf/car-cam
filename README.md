@@ -47,6 +47,22 @@ Sign and install it with one of these:
 - **A paid Apple Developer account ($99 a year):** install lasts up to a year,
   and CI could be extended to sign builds and send them to TestFlight.
 
+## Desktop: Linux and Windows (preview)
+
+Car Cam also runs on a computer: **[download desktop-v2.0.0](https://github.com/Awesome-Framebuf/car-cam/releases/tag/desktop-v2.0.0)**
+(a pre-release until Windows has been tried on a real PC). `car-cam-linux-x64.tar.gz`
+is for Linux and `CarCamSetup.exe` for Windows 10/11. Both are the camera app
+only and work with any Wi-Fi adapter, including the one built into your
+computer. The release page has the install steps.
+
+| Car picker | Live view | Full screen |
+| --- | --- | --- |
+| ![Desktop car picker](docs/images/desktop-car-picker.png) | ![Desktop live view](docs/images/desktop-live.png) | ![Desktop full screen](docs/images/desktop-full-screen.png) |
+
+*Mockups for now: rendered from the app's real screens, with a pretend car list
+and a drawn road labelled "Simulated picture" in place of the camera. Real
+screenshots will replace them.*
+
 ## Use
 
 Turn on the car, join its Wi-Fi on your phone and open Car Cam. See the
