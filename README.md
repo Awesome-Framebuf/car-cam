@@ -56,14 +56,23 @@ Turn on the car, join its Wi-Fi on your phone and open Car Cam. See the
 
 ## Desktop: Linux and Windows (preview)
 
-Download from the [desktop releases](../../releases) (tags `desktop-v…`). Built
-from the `desktop` branch by `.github/workflows/desktop.yml`.
+Download from the **[desktop-v2.0.0 release](https://github.com/Awesome-Framebuf/car-cam/releases/tag/desktop-v2.0.0)**
+(a pre-release until Windows is tried on a real PC). Built from the `desktop`
+branch by `.github/workflows/desktop.yml`.
 
-You need a **second Wi-Fi adapter** for the car, such as a USB dongle, so your
-internet stays on your normal Wi-Fi or cable. For the AIC8800D80 (AX900) dongle,
-install its driver first with `WiFi-Dongle-Install` (also in the release).
+Works with **any Wi-Fi adapter**, including the one built into your computer.
+The downloads contain the camera app only, no driver.
 
-**Linux** (x64, NetworkManager):
+| Car picker | Live view | Full screen |
+| --- | --- | --- |
+| ![Car picker](docs/images/desktop-car-picker.png) | ![Live view](docs/images/desktop-live.png) | ![Full screen](docs/images/desktop-full-screen.png) |
+
+*Mockups for now: rendered from the app's real screens by
+`tool/desktop_screenshots_test.dart`, with a pretend car list and a drawn road
+labelled "Simulated picture" in place of the camera. Real screenshots will
+replace them.*
+
+**Linux** (x64, NetworkManager): download `car-cam-linux-x64.tar.gz`, then
 
 ```sh
 tar xzf car-cam-linux-x64.tar.gz
@@ -75,11 +84,17 @@ Start **Car Cam** from the app menu, or run `./bundle/car_cam` without installin
 
 **Windows** (10/11, x64): run `CarCamSetup.exe` (unsigned: SmartScreen > More
 info > Run anyway), then start **Car Cam** from the Start menu. Allow private
-networks if the firewall asks. The installer adds no driver.
+networks if the firewall asks.
 
-- The app joins the car without ever making it the internet route (Linux:
-  NetworkManager `never-default`; Windows: a high interface metric, checked
-  after joining), and refuses adapters that carry another network.
+**Use:** switch the car on, press **Scan for cars**, then **Connect**.
+
+- With **one Wi-Fi adapter**, Car Cam asks first, then switches it from your
+  home Wi-Fi to the car; the internet is off while you watch and comes back when
+  you disconnect or close the app.
+- With **two Wi-Fi adapters**, pick the spare one and your internet stays on.
+  The car never becomes the internet route (Linux: NetworkManager
+  `never-default`; Windows: checked after joining, with a high interface metric
+  if needed).
 - The car picker scans for networks starting with `757-`, remembers cars, and
   lets you name them.
 - Photos go to `Pictures/Car Cam`, videos (Motion-JPEG `.avi`) to `Videos/Car Cam`.
@@ -87,8 +102,20 @@ networks if the firewall asks. The installer adds no driver.
 - VLC, OBS or a browser can open the live video at
   `http://localhost:8808/car.mjpg`. If that port is taken the app uses the next
   one and shows the address. A single picture is at `/car.jpg`.
-- Tested on a real car on Linux. The Windows build is so far only built and
-  unit-tested in CI.
+- Tested on a real car on Linux with a second USB Wi-Fi adapter. One-adapter
+  mode is tested with simulated networks only. The Windows build is so far only
+  built and unit-tested in CI.
+
+### Optional: BT+AX900 USB dongle (only if you have this exact adapter)
+
+Skip this unless you own the BT+AX900 (AIC8800D80) USB Wi-Fi + Bluetooth dongle
+and it isn't working yet. Car Cam doesn't need it.
+
+- `WiFi-Dongle-Install.zip` / `.tar.gz` (on the same release): driver install
+  scripts for that dongle only, `Linux/install-aic8800d80.sh` and
+  `Windows\install-aic8800d80.cmd`. Source: `packaging/wifi-dongle/`. The vendor's
+  Windows driver is not included; the script installs it from the dongle's own
+  CD drive.
 
 ## Develop
 

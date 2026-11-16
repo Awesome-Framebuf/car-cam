@@ -5,8 +5,8 @@ For the small USB Wi-Fi 6 + Bluetooth dongle (AX900 type, AICSemi
 AIC8800D80). It first shows up as a CD drive (USB a69c:5721) and switches
 to Wi-Fi (a69c:8d80) once its driver is installed.
 
-You only need this if you use this dongle. Car Cam itself works with any
-second Wi-Fi adapter that Linux or Windows already supports.
+Optional. You only need this if you have this exact dongle. Car Cam itself
+works with any Wi-Fi adapter, including the one built into your computer.
 
 Linux (Ubuntu 24.04 tested)
     cd Linux

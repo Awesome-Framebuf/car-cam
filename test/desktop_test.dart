@@ -15,7 +15,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_car.dart';
 
-Uint8List body(int size) => Uint8List.fromList(List.generate(size, (i) => i & 0xFF));
+Uint8List body(int size) =>
+    Uint8List.fromList(List.generate(size, (i) => i & 0xFF));
 
 /// A scripted `nmcli`: answers by the first matching argument prefix and
 /// records every call.
@@ -30,7 +31,8 @@ class FakeNmcli {
     final line = [exe, ...args].join(' ');
     String? best;
     for (final k in answers.keys) {
-      if (line.startsWith(k) && (best == null || k.length > best.length)) best = k;
+      if (line.startsWith(k) && (best == null || k.length > best.length))
+        best = k;
     }
     return ProcessResult(0, 0, best == null ? '' : answers[best]!, '');
   }
@@ -57,19 +59,25 @@ void main() {
     });
 
     test('profile names follow the existing car-<suffix> style', () {
-      expect(NetworkManagerCarNetwork.profileNameFor('757-M64 A1B2C3'), 'car-A1B2C3');
+      expect(
+        NetworkManagerCarNetwork.profileNameFor('757-M64 A1B2C3'),
+        'car-A1B2C3',
+      );
     });
   });
 
   group('joining', () {
-    FakeNmcli nm({required bool carProfileExists, bool defaultViaDongle = false}) {
+    FakeNmcli nm({
+      required bool carProfileExists,
+      bool defaultViaDongle = false,
+    }) {
       var joined = false;
       final f = FakeNmcli({
         'ip -4 route show default': 'default via 192.168.1.1 dev wlp2s0\n',
-        'nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device status':
-            'wlp2s0:wifi:connected:Home\nwlx1:wifi:disconnected:--\nenp3s0:ethernet:unavailable:\n',
+        'nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device status': 'wlp2s0:wifi:connected:Home\nwlx1:wifi:disconnected:--\nenp3s0:ethernet:unavailable:\n',
         'nmcli -g 802-11-wireless.ssid connection show id Home': 'Home\n',
-        'nmcli -g 802-11-wireless.ssid connection show id car-A1B2C3': '757-M64 A1B2C3\n',
+        'nmcli -g 802-11-wireless.ssid connection show id car-A1B2C3':
+            '757-M64 A1B2C3\n',
         'nmcli -t -f NAME,UUID,TYPE connection show': carProfileExists
             ? 'Home:11111111-1111-1111-1111-111111111111:802-11-wireless\n'
                   'car-A1B2C3:22222222-2222-2222-2222-222222222222:802-11-wireless\n'
@@ -90,7 +98,8 @@ void main() {
           f.answers['nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device status'] =
               'wlp2s0:wifi:connected:Home\nwlx1:wifi:connected:car-A1B2C3\n';
           if (defaultViaDongle) {
-            f.answers['ip -4 route show default'] = 'default via 192.168.169.1 dev wlx1\n';
+            f.answers['ip -4 route show default'] =
+                'default via 192.168.169.1 dev wlx1\n';
           }
         }
         .._source = f
@@ -114,10 +123,18 @@ void main() {
       final up = fake.calls.firstWhere((c) => c.contains('up'));
       expect(
         up,
-        containsAllInOrder(['uuid', '33333333-3333-3333-3333-333333333333', 'ifname', 'wlx1']),
+        containsAllInOrder([
+          'uuid',
+          '33333333-3333-3333-3333-333333333333',
+          'ifname',
+          'wlx1',
+        ]),
       );
       // The internet adapter is never touched.
-      expect(fake.calls.where((c) => c.contains('wlp2s0') && !c.contains('show')), isEmpty);
+      expect(
+        fake.calls.where((c) => c.contains('wlp2s0') && !c.contains('show')),
+        isEmpty,
+      );
     });
 
     test('an existing profile is found by SSID and made safe again', () async {
@@ -128,27 +145,99 @@ void main() {
       final modify = fake.calls.firstWhere((c) => c.contains('modify'));
       expect(
         modify,
-        containsAllInOrder(['22222222-2222-2222-2222-222222222222', 'ipv4.never-default', 'yes']),
+        containsAllInOrder([
+          '22222222-2222-2222-2222-222222222222',
+          'ipv4.never-default',
+          'yes',
+        ]),
       );
     });
 
     test('refuses an adapter that carries another network', () async {
       final fake = nm(carProfileExists: true);
       final net = NetworkManagerCarNetwork(run: fake.run);
-      await expectLater(net.join('wlp2s0', '757-M64 A1B2C3'), throwsA(isA<CarNetworkException>()));
-      expect(fake.calls.where((c) => c.contains('up') || c.contains('modify')), isEmpty);
+      await expectLater(
+        net.join('wlp2s0', '757-M64 A1B2C3'),
+        throwsA(isA<CarNetworkException>()),
+      );
+      expect(
+        fake.calls.where((c) => c.contains('up') || c.contains('modify')),
+        isEmpty,
+      );
     });
 
     test('refuses networks that are not cars', () async {
       final net = NetworkManagerCarNetwork(run: nm(carProfileExists: true).run);
-      await expectLater(net.join('wlx1', 'HomeWifi'), throwsA(isA<CarNetworkException>()));
+      await expectLater(
+        net.join('wlx1', 'HomeWifi'),
+        throwsA(isA<CarNetworkException>()),
+      );
     });
 
     test('backs out if the car became the default route', () async {
       final fake = nm(carProfileExists: true, defaultViaDongle: true);
       final net = NetworkManagerCarNetwork(run: fake.run);
-      await expectLater(net.join('wlx1', '757-M64 A1B2C3'), throwsA(isA<CarNetworkException>()));
+      await expectLater(
+        net.join('wlx1', '757-M64 A1B2C3'),
+        throwsA(isA<CarNetworkException>()),
+      );
       expect(fake.calls.last, ['nmcli', 'device', 'disconnect', 'wlx1']);
+    });
+
+    test('takes over the only adapter when asked, and puts it back on leave', () async {
+      var onCar = false;
+      final f = FakeNmcli({});
+      Future<ProcessResult> run(String exe, List<String> args) async {
+        final line = [exe, ...args].join(' ');
+        f.answers
+          ..['ip -4 route show default'] = onCar
+              ? ''
+              : 'default via 192.168.1.1 dev wlp2s0\n'
+          ..['nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device status'] =
+              'wlp2s0:wifi:connected:${onCar ? 'car-A1B2C3' : 'Home'}\n'
+          ..['nmcli -g 802-11-wireless.ssid connection show id Home'] = 'Home\n'
+          ..['nmcli -g 802-11-wireless.ssid connection show id car-A1B2C3'] =
+              '757-M64 A1B2C3\n'
+          ..['nmcli -t -f NAME,UUID,TYPE connection show'] =
+              'Home:11111111-1111-1111-1111-111111111111:802-11-wireless\n'
+          ..['nmcli connection add'] = "Connection 'car-A1B2C3' (33333333-3333-3333-3333-333333333333) successfully added.\n"
+          ..['nmcli -t -f GENERAL.CONNECTION,IP4.ADDRESS device show wlp2s0'] =
+              onCar
+              ? 'GENERAL.CONNECTION:car-A1B2C3\nIP4.ADDRESS[1]:192.168.169.3/24\n'
+              : 'GENERAL.CONNECTION:Home\nIP4.ADDRESS[1]:192.168.1.20/24\n';
+        final r = await f.call(exe, args);
+        if (line.contains('connection up uuid')) onCar = true;
+        if (line.contains('device disconnect')) onCar = false;
+        return r;
+      }
+
+      final net = NetworkManagerCarNetwork(run: run);
+      await expectLater(
+        net.join('wlp2s0', '757-M64 A1B2C3'),
+        throwsA(isA<CarNetworkException>()),
+      );
+      final a = await net.join('wlp2s0', '757-M64 A1B2C3', takeOver: true);
+      expect(a.onCar, isTrue);
+      final add = f.calls.firstWhere((c) => c.contains('add'));
+      expect(add[add.indexOf('ipv4.never-default') + 1], 'yes');
+      await net.leave('wlp2s0');
+      expect(f.calls.last, [
+        'nmcli',
+        '--wait',
+        '30',
+        'connection',
+        'up',
+        'id',
+        'Home',
+        'ifname',
+        'wlp2s0',
+      ]);
+      // A second leave has nothing to put back.
+      final n = f.calls.length;
+      await net.leave('wlp2s0');
+      expect(f.calls.sublist(n), [
+        ['nmcli', 'device', 'disconnect', 'wlp2s0'],
+      ]);
     });
   });
 
@@ -207,13 +296,16 @@ void main() {
       fake = FakeNmcli({
         'netsh wlan show interfaces': interfaces,
         'netsh wlan show networks': networks,
-        'powershell -NoProfile -NonInteractive -Command Get-NetRoute': 'Wi-Fi\r\n',
+        'powershell -NoProfile -NonInteractive -Command Get-NetRoute':
+            'Wi-Fi\r\n',
       });
       Future<ProcessResult> run(String exe, List<String> args) async {
         final r = await fake.call(exe, args);
         final line = [exe, ...args].join(' ');
         if (line.startsWith('netsh wlan add profile')) {
-          final path = args.firstWhere((a) => a.startsWith('filename=')).substring(9);
+          final path = args
+              .firstWhere((a) => a.startsWith('filename='))
+              .substring(9);
           profiles.add(await File(path).readAsString());
         } else if (line.startsWith('netsh wlan connect')) {
           addresses['Wi-Fi 2'] = '192.168.169.3';
@@ -222,7 +314,16 @@ void main() {
         } else if (line.contains('Start-Process powershell -Verb RunAs')) {
           if (metricFixWorks) route = 'Wi-Fi';
         }
-        if (line.contains('Get-NetRoute')) return ProcessResult(0, 0, '$route\r\n', '');
+        if (line.contains('Get-NetRoute')) {
+          // Sorted: the winner only. Unsorted: every adapter with a default route.
+          if (line.contains('Sort-Object'))
+            return ProcessResult(0, 0, '$route\r\n', '');
+          final all = {
+            'Wi-Fi',
+            if (carWinsRoute && addresses.containsKey('Wi-Fi 2')) 'Wi-Fi 2',
+          };
+          return ProcessResult(0, 0, '${all.join('\r\n')}\r\n', '');
+        }
         return r;
       }
 
@@ -264,11 +365,20 @@ void main() {
       final xml = w.profiles.single;
       expect(xml, contains('<name>car-A1B2C3</name>'));
       expect(xml, contains('<connectionMode>manual</connectionMode>'));
-      expect(xml, contains('<authentication>open</authentication><encryption>none</encryption>'));
+      expect(
+        xml,
+        contains(
+          '<authentication>open</authentication><encryption>none</encryption>',
+        ),
+      );
       expect(xml, contains('<name>757-M64 A1B2C3</name>'));
       final cmds = w.fake.calls.map((c) => c.join(' ')).toList();
-      final add = cmds.indexWhere((c) => c.startsWith('netsh wlan add profile'));
-      final connect = cmds.indexWhere((c) => c.startsWith('netsh wlan connect'));
+      final add = cmds.indexWhere(
+        (c) => c.startsWith('netsh wlan add profile'),
+      );
+      final connect = cmds.indexWhere(
+        (c) => c.startsWith('netsh wlan connect'),
+      );
       expect(add, isNonNegative);
       expect(connect, greaterThan(add));
       expect(cmds[add], contains('interface=Wi-Fi 2'));
@@ -288,20 +398,34 @@ void main() {
     test('profile XML escapes the SSID and carries a password', () {
       final xml = WindowsCarNetwork.profileXml('757-<A&B>', password: 'p&ss');
       expect(xml, contains('<name>757-&lt;A&amp;B&gt;</name>'));
-      expect(xml, contains('<authentication>WPA2PSK</authentication><encryption>AES</encryption>'));
+      expect(
+        xml,
+        contains(
+          '<authentication>WPA2PSK</authentication><encryption>AES</encryption>',
+        ),
+      );
       expect(xml, contains('<keyMaterial>p&amp;ss</keyMaterial>'));
       expect(xml, isNot(contains('757-<A&B>')));
     });
 
     test('refuses an adapter that carries another network', () async {
       final w = windows();
-      await expectLater(w.net.join('Wi-Fi', '757-M64 A1B2C3'), throwsA(isA<CarNetworkException>()));
-      expect(w.fake.calls.where((c) => c.contains('connect') || c.contains('add')), isEmpty);
+      await expectLater(
+        w.net.join('Wi-Fi', '757-M64 A1B2C3'),
+        throwsA(isA<CarNetworkException>()),
+      );
+      expect(
+        w.fake.calls.where((c) => c.contains('connect') || c.contains('add')),
+        isEmpty,
+      );
     });
 
     test('refuses networks that are not cars', () async {
       final w = windows();
-      await expectLater(w.net.join('Wi-Fi 2', 'HomeWifi'), throwsA(isA<CarNetworkException>()));
+      await expectLater(
+        w.net.join('Wi-Fi 2', 'HomeWifi'),
+        throwsA(isA<CarNetworkException>()),
+      );
       expect(w.fake.calls, isEmpty);
     });
 
@@ -309,7 +433,10 @@ void main() {
       final w = windows(carWinsRoute: true, metricFixWorks: true);
       final a = await w.net.join('Wi-Fi 2', '757-M64 A1B2C3');
       expect(a.onCar, isTrue);
-      expect(w.fake.calls.where((c) => c.join(' ').contains('RunAs')), hasLength(1));
+      expect(
+        w.fake.calls.where((c) => c.join(' ').contains('RunAs')),
+        hasLength(1),
+      );
       expect(w.fake.calls.where((c) => c.contains('disconnect')), isEmpty);
     });
 
@@ -319,7 +446,62 @@ void main() {
         w.net.join('Wi-Fi 2', '757-M64 A1B2C3'),
         throwsA(isA<CarNetworkException>()),
       );
-      expect(w.fake.calls.last, ['netsh', 'wlan', 'disconnect', 'interface=Wi-Fi 2']);
+      expect(w.fake.calls.last, [
+        'netsh',
+        'wlan',
+        'disconnect',
+        'interface=Wi-Fi 2',
+      ]);
+    });
+
+    test('takes over the only adapter, allows the car route, then reconnects home', () async {
+      var onCar = false;
+      final f = FakeNmcli({});
+      Future<ProcessResult> run(String exe, List<String> args) async {
+        final line = [exe, ...args].join(' ');
+        f.answers['netsh wlan show interfaces'] = onCar
+            ? '    Name                   : Wi-Fi\r\n'
+                  '    State                  : connected\r\n'
+                  '    SSID                   : 757-M64 A1B2C3\r\n'
+                  '    Profile                : car-A1B2C3\r\n'
+            : '    Name                   : Wi-Fi\r\n'
+                  '    State                  : connected\r\n'
+                  '    SSID                   : Home\r\n'
+                  '    Profile                : Home Wi-Fi\r\n';
+        // The car's DHCP gives it the only default route.
+        f.answers['powershell -NoProfile -NonInteractive -Command Get-NetRoute'] =
+            'Wi-Fi\r\n';
+        final r = await f.call(exe, args);
+        if (line.startsWith('netsh wlan connect name=car-')) onCar = true;
+        if (line.startsWith('netsh wlan disconnect')) onCar = false;
+        return r;
+      }
+
+      final net = WindowsCarNetwork(
+        run: run,
+        addresses: () async => {
+          'Wi-Fi': onCar ? '192.168.169.3' : '192.168.1.20',
+        },
+        pollInterval: Duration.zero,
+        addressTimeout: const Duration(seconds: 2),
+      );
+      await expectLater(
+        net.join('Wi-Fi', '757-M64 A1B2C3'),
+        throwsA(isA<CarNetworkException>()),
+      );
+      final a = await net.join('Wi-Fi', '757-M64 A1B2C3', takeOver: true);
+      expect(a.onCar, isTrue);
+      // No other internet to protect: no elevation, no backing out.
+      expect(f.calls.where((c) => c.join(' ').contains('RunAs')), isEmpty);
+      expect(f.calls.where((c) => c.contains('disconnect')), isEmpty);
+      await net.leave('Wi-Fi');
+      expect(f.calls.last, [
+        'netsh',
+        'wlan',
+        'connect',
+        'name=Home Wi-Fi',
+        'interface=Wi-Fi',
+      ]);
     });
 
     test('the elevated metric fix carries no quotes through Start-Process', () {
@@ -329,7 +511,8 @@ void main() {
       final b64 = RegExp(r"'([A-Za-z0-9+/=]+)'$").firstMatch(cmd)!.group(1)!;
       final bytes = base64.decode(b64);
       final inner = String.fromCharCodes([
-        for (var i = 0; i < bytes.length; i += 2) bytes[i] | (bytes[i + 1] << 8),
+        for (var i = 0; i < bytes.length; i += 2)
+          bytes[i] | (bytes[i + 1] << 8),
       ]);
       expect(inner, contains("-InterfaceAlias 'Wi-Fi 2'"));
       expect(inner, contains('-InterfaceMetric 9000'));
@@ -366,7 +549,11 @@ void main() {
         0xD9,
       ]);
       expect(jpegSize(jpeg), (640, 360));
-      final w = await AviWriter.create(File('${dir.path}/a.avi'), width: 640, height: 360);
+      final w = await AviWriter.create(
+        File('${dir.path}/a.avi'),
+        width: 640,
+        height: 360,
+      );
       for (var i = 0; i < 5; i++) {
         await w.addFrame(jpeg);
       }
@@ -395,7 +582,10 @@ void main() {
       addTearDown(bridge.stop);
       expect(bridge.url, startsWith('http://localhost:188'));
       // A raw socket, because flutter_test replaces HttpClient with a mock.
-      final sock = await Socket.connect(InternetAddress.loopbackIPv4, bridge.port!);
+      final sock = await Socket.connect(
+        InternetAddress.loopbackIPv4,
+        bridge.port!,
+      );
       final got = <int>[];
       sock.listen(got.addAll);
       sock.write('GET /car.mjpg HTTP/1.1\r\nHost: localhost\r\n\r\n');
@@ -443,7 +633,10 @@ void main() {
         label: "Son's car",
         device: 'lo',
         bridge: bridge,
-        folders: MediaFolders(Directory('${dir.path}/p'), Directory('${dir.path}/v')),
+        folders: MediaFolders(
+          Directory('${dir.path}/p'),
+          Directory('${dir.path}/v'),
+        ),
         client: CarVideoClient(
           carAddress: InternetAddress.loopbackIPv4,
           portOverrides: {CameraFamily.bl608: car.port, CameraFamily.bl618: 9},

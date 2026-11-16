@@ -4,8 +4,7 @@
 #   ./install.sh               install the app
 #   ./install.sh --uninstall   remove the app (leaves your saved cars)
 #
-# No Wi-Fi driver is installed here. If there's no free Wi-Fi adapter for the
-# car, it says so and points to the separate WiFi-Dongle-Install package.
+# Installs the camera app only, no Wi-Fi driver. Any Wi-Fi adapter works.
 #
 # Asks for your password once (sudo). Tested on Ubuntu 24.04.
 set -Eeuo pipefail
@@ -59,31 +58,20 @@ if [[ ${#pkgs[@]} -gt 0 ]]; then
 fi
 ok "System packages"
 
-# --- A free Wi-Fi adapter for the car ---------------------------------------
-# The car is reached on a second Wi-Fi adapter, so the internet stays on the
-# first one. Drivers are not installed here; see WiFi-Dongle-Install.
-say "Checking for a free Wi-Fi adapter"
-wifi_total=0; wifi_free=0
+# --- Wi-Fi --------------------------------------------------------------------
+# Any Wi-Fi adapter works. With only one, the app switches it to the car while
+# you watch (the internet is off meanwhile); a second one keeps the internet on.
+say "Checking Wi-Fi"
+wifi_total=0
 if command -v nmcli >/dev/null; then
-  while IFS=: read -r _dev type state conn; do
-    [[ $type == wifi ]] || continue
-    wifi_total=$((wifi_total + 1))
-    if [[ $state != connected* ]] || [[ $conn == car-* ]] || [[ $conn == 757-* ]]; then
-      wifi_free=$((wifi_free + 1))
-    fi
-  done < <(nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device 2>/dev/null)
+  while IFS=: read -r _dev type _rest; do
+    [[ $type == wifi ]] && wifi_total=$((wifi_total + 1))
+  done < <(nmcli -t -f DEVICE,TYPE device 2>/dev/null)
 fi
-if [[ $wifi_free -gt 0 ]]; then
-  ok "Free Wi-Fi adapter found ($wifi_total Wi-Fi in total)"
+if [[ $wifi_total -gt 0 ]]; then
+  ok "$wifi_total Wi-Fi adapter(s) found"
 else
-  warn "No free Wi-Fi adapter ($wifi_total Wi-Fi in use for your internet or none at all)."
-  warn "Car Cam needs a second Wi-Fi adapter, such as a USB dongle, for the car."
-  if lsusb 2>/dev/null | grep -qi 'a69c:'; then
-    warn "An AIC8800 dongle is plugged in but has no driver yet:"
-    warn "run WiFi-Dongle/Linux/install-aic8800d80.sh (the WiFi-Dongle-Install package)."
-  else
-    warn "For the AIC8800D80 (AX900) dongle, use the WiFi-Dongle-Install package."
-  fi
+  warn "No Wi-Fi adapter found yet. Car Cam needs Wi-Fi to reach the car."
 fi
 
 # --- The app ----------------------------------------------------------------
@@ -115,8 +103,8 @@ cat <<'EOF'
 
 Done. Start "Car Cam" from your apps menu, or run:  car-cam
 
-  - Plug in the USB Wi-Fi dongle, pick it in the app, scan, press Connect.
-    Your internet stays on your normal Wi-Fi or cable.
+  - Switch the car on, press "Scan for cars", then Connect. With one Wi-Fi
+    adapter the internet is off while you watch; a second one keeps it on.
   - Watch in VLC: Media > Open Network Stream > http://localhost:8808/car.mjpg
   - Photos go to Pictures/Car Cam, videos to Videos/Car Cam.
 EOF

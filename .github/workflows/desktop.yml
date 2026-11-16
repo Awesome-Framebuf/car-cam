@@ -2,7 +2,8 @@ name: Desktop
 
 # Builds the desktop app (Linux and Windows) as artifacts on every push to
 # `desktop`. A tag `desktop-v*` also publishes a GitHub release with the Linux
-# tarball, CarCamSetup.exe and WiFi-Dongle-Install. Never touches `main`.
+# tarball, CarCamSetup.exe and the optional WiFi-Dongle-Install, as a pre-release.
+# Never touches `main`.
 on:
   push:
     branches: [desktop]
@@ -107,4 +108,4 @@ jobs:
             dist/WiFi-Dongle-Install.zip dist/WiFi-Dongle-Install.tar.gz \
             --title "Car Cam desktop ${TAG#desktop-v} (Linux and Windows)" \
             --notes-file packaging/RELEASE-NOTES.md \
-            --latest=false
+            --prerelease --latest=false

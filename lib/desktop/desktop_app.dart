@@ -20,7 +20,13 @@ typedef SessionFactory = CarSession Function({
 });
 
 class DesktopApp extends StatelessWidget {
-  const DesktopApp({super.key, this.network, this.store, this.bridge, this.sessionFactory});
+  const DesktopApp({
+    super.key,
+    this.network,
+    this.store,
+    this.bridge,
+    this.sessionFactory,
+  });
 
   final CarNetwork? network;
   final CarStore? store;
@@ -33,7 +39,10 @@ class DesktopApp extends StatelessWidget {
       title: 'Car Cam',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal, brightness: Brightness.dark),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.teal,
+          brightness: Brightness.dark,
+        ),
       ),
       home: DesktopHome(
         network: network,
@@ -46,7 +55,13 @@ class DesktopApp extends StatelessWidget {
 }
 
 class DesktopHome extends StatefulWidget {
-  const DesktopHome({super.key, this.network, this.store, this.bridge, this.sessionFactory});
+  const DesktopHome({
+    super.key,
+    this.network,
+    this.store,
+    this.bridge,
+    this.sessionFactory,
+  });
 
   final CarNetwork? network;
   final CarStore? store;
@@ -78,6 +93,10 @@ class _DesktopHomeState extends State<DesktopHome> {
   bool _scanning = false;
   String? _joining;
   String? _error;
+
+  /// Adapters switched from another network to a car, so they go back to it
+  /// on disconnect or when the app closes.
+  final _takenOver = <String>{};
 
   /// The car being shown. Kept per adapter so more can be added later.
   CarSession? _session;
@@ -126,6 +145,10 @@ class _DesktopHomeState extends State<DesktopHome> {
 
   Future<ui.AppExitResponse> _onExit() async {
     await _closeSession();
+    for (final device in _takenOver.toList()) {
+      await _net.leave(device);
+    }
+    _takenOver.clear();
     await _bridge.stop();
     return ui.AppExitResponse.exit;
   }
@@ -138,13 +161,17 @@ class _DesktopHomeState extends State<DesktopHome> {
       setState(() {
         _adapters = list;
         final current = list.where((a) => a.device == _device);
-        if (pickDevice || current.isEmpty || !current.first.isFree) {
+        if (pickDevice || current.isEmpty || !current.first.isUsable) {
+          // A car first, then a spare adapter, then the only one there is.
           final onCar = list.where((a) => a.onCar);
           final free = list.where((a) => a.isFree);
+          final usable = list.where((a) => a.isUsable);
           _device = onCar.isNotEmpty
               ? onCar.first.device
               : free.isNotEmpty
               ? free.first.device
+              : usable.isNotEmpty
+              ? usable.first.device
               : null;
         }
       });
@@ -192,7 +219,11 @@ class _DesktopHomeState extends State<DesktopHome> {
   }) async {
     await _closeSession();
     final s =
-        widget.sessionFactory?.call(label: label, device: device, bridge: _bridge) ??
+        widget.sessionFactory?.call(
+          label: label,
+          device: device,
+          bridge: _bridge,
+        ) ??
         CarSession(
           label: label,
           device: device,
@@ -228,9 +259,14 @@ class _DesktopHomeState extends State<DesktopHome> {
   Future<void> _connect(_CarEntry car) async {
     final device = _device;
     if (device == null) {
-      setState(() => _error = 'No free Wi-Fi adapter. Plug in a second Wi-Fi dongle.');
+      setState(
+        () => _error = 'No Wi-Fi adapter found. Switch Wi-Fi on and try again.',
+      );
       return;
     }
+    final chosen = _adapters.where((a) => a.device == device).firstOrNull;
+    final takeOver = chosen != null && !chosen.isFree;
+    if (takeOver && !await _confirmTakeOver(chosen)) return;
     String? password;
     if (car.scanned?.secured ?? false) {
       password = await _askPassword(car.name);
@@ -242,7 +278,13 @@ class _DesktopHomeState extends State<DesktopHome> {
     });
     try {
       await _closeSession();
-      final adapter = await _net.join(device, car.ssid, password: password);
+      final adapter = await _net.join(
+        device,
+        car.ssid,
+        password: password,
+        takeOver: takeOver,
+      );
+      if (takeOver) _takenOver.add(device);
       final saved = await _store.remember(car.ssid, device);
       await _openSession(
         label: saved.name,
@@ -261,8 +303,38 @@ class _DesktopHomeState extends State<DesktopHome> {
   Future<void> _disconnect() async {
     final device = _session?.device;
     await _closeSession();
-    if (device != null) await _net.leave(device);
+    if (device != null) {
+      await _net.leave(device);
+      _takenOver.remove(device);
+    }
     await _refreshAdapters();
+  }
+
+  /// Asks before moving an adapter off its network (usually the internet).
+  Future<bool> _confirmTakeOver(WifiAdapter a) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Use this Wi-Fi for the car?'),
+        content: Text(
+          '${a.device} is on ${a.ssid ?? 'another network'}. While you watch the car it '
+          'switches to the car, so this computer has no Wi-Fi internet. '
+          'Disconnect or close Car Cam to switch it back.\n\n'
+          'A second Wi-Fi adapter (any USB Wi-Fi adapter) keeps your internet on.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Switch to the car'),
+          ),
+        ],
+      ),
+    );
+    return ok ?? false;
   }
 
   void _onFrame(Uint8List jpeg) {
@@ -331,7 +403,9 @@ class _DesktopHomeState extends State<DesktopHome> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text), duration: const Duration(seconds: 4)));
+      ..showSnackBar(
+        SnackBar(content: Text(text), duration: const Duration(seconds: 4)),
+      );
   }
 
   Future<String?> _askPassword(String name) {
@@ -347,8 +421,14 @@ class _DesktopHomeState extends State<DesktopHome> {
           onSubmitted: (v) => Navigator.pop(ctx, v),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, c.text), child: const Text('Join')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, c.text),
+            child: const Text('Join'),
+          ),
         ],
       ),
     );
@@ -367,13 +447,20 @@ class _DesktopHomeState extends State<DesktopHome> {
           onSubmitted: (v) => Navigator.pop(ctx, v),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, c.text), child: const Text('Save')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, c.text),
+            child: const Text('Save'),
+          ),
         ],
       ),
     );
     if (name == null) return;
-    if (_store.find(car.ssid) == null) await _store.remember(car.ssid, _device ?? '');
+    if (_store.find(car.ssid) == null)
+      await _store.remember(car.ssid, _device ?? '');
     await _store.rename(car.ssid, name);
     if (_sessionSsid == car.ssid) _session?.label = _store.find(car.ssid)!.name;
     setState(() {});
@@ -408,7 +495,8 @@ class _DesktopHomeState extends State<DesktopHome> {
     }
     final list = map.values.toList();
     list.sort((a, b) {
-      if ((a.scanned != null) != (b.scanned != null)) return a.scanned != null ? -1 : 1;
+      if ((a.scanned != null) != (b.scanned != null))
+        return a.scanned != null ? -1 : 1;
       return a.name.toLowerCase().compareTo(b.name.toLowerCase());
     });
     return list;
@@ -447,7 +535,8 @@ class _DesktopHomeState extends State<DesktopHome> {
     return Scaffold(
       body: Row(
         children: [
-          if (_managed && !_fullScreen) SizedBox(width: 330, child: _sidebar(context)),
+          if (_managed && !_fullScreen)
+            SizedBox(width: 330, child: _sidebar(context)),
           if (_managed && !_fullScreen) const VerticalDivider(width: 1),
           Expanded(
             child: Column(
@@ -492,14 +581,16 @@ class _DesktopHomeState extends State<DesktopHome> {
             key: ValueKey(_adapters.map((a) => a.device).join(',')),
             initialValue: _device,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Wi-Fi adapter for the car'),
+            decoration: const InputDecoration(
+              labelText: 'Wi-Fi adapter for the car',
+            ),
             items: [
               for (final a in _adapters)
                 DropdownMenuItem(
                   value: a.device,
-                  enabled: a.isFree,
+                  enabled: a.isUsable,
                   child: Text(
-                    '${a.device} · ${a.describe}${a.isFree ? '' : ' (in use)'}',
+                    '${a.device} · ${a.describe}${a.isFree || !a.isUsable ? '' : ' (switches to the car)'}',
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -515,8 +606,9 @@ class _DesktopHomeState extends State<DesktopHome> {
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Text(
-              'Every Wi-Fi adapter is in use for other networks. Plug in a USB '
-              'Wi-Fi dongle for the car, so your internet stays on.',
+              'Your Wi-Fi is on another network. Connecting switches it to the '
+              'car until you disconnect, so the internet is off meanwhile. A '
+              'second Wi-Fi adapter keeps it on.',
             ),
           ),
         Padding(
@@ -539,7 +631,9 @@ class _DesktopHomeState extends State<DesktopHome> {
               if (_entries.isEmpty && !_scanning)
                 const Padding(
                   padding: EdgeInsets.all(16),
-                  child: Text('No cars yet. Turn a car on, wait a few seconds, then scan.'),
+                  child: Text(
+                    'No cars yet. Turn a car on, wait a few seconds, then scan.',
+                  ),
                 ),
             ],
           ),
@@ -547,7 +641,10 @@ class _DesktopHomeState extends State<DesktopHome> {
         if (_error != null)
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+            child: Text(
+              _error!,
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
           ),
       ],
     );
@@ -559,13 +656,16 @@ class _DesktopHomeState extends State<DesktopHome> {
     final subtitle = [
       if (car.saved != null && car.saved!.name != car.ssid) car.ssid,
       if (connected) 'Connected on ${_session?.device}',
-      if (!connected && car.scanned != null) 'In range · ${car.scanned!.signal}%',
+      if (!connected && car.scanned != null)
+        'In range · ${car.scanned!.signal}%',
       if (!connected && car.scanned == null) 'Not seen in the last scan',
     ].join('\n');
     return ListTile(
       leading: Icon(
         Icons.directions_car,
-        color: connected ? Colors.tealAccent : (car.scanned != null ? null : Colors.white38),
+        color: connected
+            ? Colors.tealAccent
+            : (car.scanned != null ? null : Colors.white38),
       ),
       title: Text(car.name),
       subtitle: Text(subtitle),
@@ -574,7 +674,10 @@ class _DesktopHomeState extends State<DesktopHome> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (joining)
-            const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2))
+            const SizedBox.square(
+              dimension: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
           else if (connected)
             IconButton(
               tooltip: 'Disconnect',
@@ -585,13 +688,16 @@ class _DesktopHomeState extends State<DesktopHome> {
             IconButton(
               tooltip: 'Connect',
               icon: const Icon(Icons.login),
-              onPressed: _joining == null && car.scanned != null ? () => _connect(car) : null,
+              onPressed: _joining == null && car.scanned != null
+                  ? () => _connect(car)
+                  : null,
             ),
           PopupMenuButton<String>(
             onSelected: (v) => v == 'rename' ? _rename(car) : _forget(car),
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'rename', child: Text('Rename')),
-              if (car.saved != null) const PopupMenuItem(value: 'forget', child: Text('Forget')),
+              if (car.saved != null)
+                const PopupMenuItem(value: 'forget', child: Text('Forget')),
             ],
           ),
         ],
@@ -618,7 +724,9 @@ class _DesktopHomeState extends State<DesktopHome> {
                 icon: const Icon(Icons.copy, size: 18),
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: url));
-                  _toast('Copied. In VLC: Media › Open Network Stream, paste, Play.');
+                  _toast(
+                    'Copied. In VLC: Media › Open Network Stream, paste, Play.',
+                  );
                 },
               ),
             TextButton.icon(
@@ -631,7 +739,8 @@ class _DesktopHomeState extends State<DesktopHome> {
               icon: const Icon(Icons.video_library_outlined, size: 18),
               label: const Text('Videos'),
             ),
-            if (_session != null) Text('${_session!.label} · ${_session!.framesReceived} frames'),
+            if (_session != null)
+              Text('${_session!.label} · ${_session!.framesReceived} frames'),
           ],
         ),
       ),
@@ -645,15 +754,20 @@ class _DesktopHomeState extends State<DesktopHome> {
         title: const Text('How to connect'),
         content: const Text(
           '1. Switch the car on and wait for its light.\n'
-          '2. Choose a Wi-Fi adapter that is not your internet one, '
-          'usually a USB dongle.\n'
+          '2. Choose the Wi-Fi adapter for the car. Any adapter works.\n'
           '3. Scan, then press Connect next to the car (names start with 757-).\n\n'
-          'Your internet stays on its own adapter: the car is never made the '
-          'default route.\n\n'
+          'With one Wi-Fi adapter, the internet is off while you watch and '
+          'comes back when you disconnect. With a second adapter, the internet '
+          'stays on the other one: the car never becomes the internet route.\n\n'
           'Use the address at the bottom to watch the same video in VLC '
           '(Media › Open Network Stream).',
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }

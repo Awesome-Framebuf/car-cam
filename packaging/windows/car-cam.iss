@@ -3,8 +3,8 @@
 ;   ISCC.exe /DAppVersion=x.y.z packaging\windows\car-cam.iss
 ; Output: packaging\windows\Output\CarCamSetup.exe
 ;
-; This installer installs NO Wi-Fi driver. The AIC8800D80 dongle driver is the
-; separate WiFi-Dongle-Install package.
+; Installs the camera app only: no Wi-Fi driver, no network changes, no
+; questions about adapters. Car Cam works with any Wi-Fi adapter.
 
 #ifndef AppVersion
   #define AppVersion "2.0.0"
@@ -43,48 +43,3 @@ Name: "{autodesktop}\Car Cam"; Filename: "{app}\car_cam.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\car_cam.exe"; Description: "{cm:LaunchProgram,Car Cam}"; Flags: nowait postinstall skipifsilent
-
-[Code]
-// Counts the Wi-Fi adapters ("Name : ..." lines of netsh wlan show interfaces).
-function WifiAdapterCount(): Integer;
-var
-  TmpFile: String;
-  Lines: TArrayOfString;
-  I, Code: Integer;
-  Line: String;
-begin
-  Result := 0;
-  TmpFile := ExpandConstant('{tmp}\wlan.txt');
-  if not Exec(ExpandConstant('{cmd}'), '/C netsh wlan show interfaces > "' + TmpFile + '"',
-              '', SW_HIDE, ewWaitUntilTerminated, Code) then
-    Exit;
-  if not LoadStringsFromFile(TmpFile, Lines) then
-    Exit;
-  for I := 0 to GetArrayLength(Lines) - 1 do
-  begin
-    Line := Trim(Lines[I]);
-    if (Pos('Name', Line) = 1) and (Pos(':', Line) > 0) then
-      Result := Result + 1;
-  end;
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-var
-  Code: Integer;
-begin
-  if CurStep <> ssPostInstall then
-    Exit;
-
-  // The car's DHCP offers itself as gateway: give dongle adapters a high
-  // metric now so the car never becomes the internet route.
-  Exec('powershell.exe',
-       '-NoProfile -NonInteractive -Command "Get-NetAdapter | Where-Object { $_.InterfaceDescription -match ''AIC|8800'' } | ForEach-Object { Set-NetIPInterface -InterfaceIndex $_.ifIndex -InterfaceMetric 9000 }"',
-       '', SW_HIDE, ewWaitUntilTerminated, Code);
-
-  // Never fail the install over this: only a hint.
-  if (WifiAdapterCount() < 2) and not WizardSilent() then
-    MsgBox('Car Cam needs a second Wi-Fi adapter for the car, such as a USB dongle. ' +
-           'For the AIC8800D80 (AX900) dongle, run WiFi-Dongle-Install first, ' +
-           'or the setup program on the dongle''s own CD drive.',
-           mbInformation, MB_OK);
-end;
