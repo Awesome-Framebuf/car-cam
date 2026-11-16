@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 /// Car Wi-Fi networks are named like `757-M64 A1B2C3`.
@@ -101,6 +102,7 @@ abstract class CarNetwork {
 
   static CarNetwork forPlatform() {
     if (Platform.isLinux) return NetworkManagerCarNetwork();
+    if (Platform.isWindows) return WindowsCarNetwork();
     return UnsupportedCarNetwork();
   }
 }
@@ -322,6 +324,322 @@ class NetworkManagerCarNetwork implements CarNetwork {
   Future<void> leave(String device) async {
     try {
       await _nmcli(['device', 'disconnect', device]);
+    } on CarNetworkException {
+      // Already disconnected.
+    }
+  }
+}
+
+/// IPv4 address per interface name. Replaced in tests.
+typedef AddressLookup = Future<Map<String, String>> Function();
+
+Future<Map<String, String>> _interfaceAddresses() async {
+  final result = <String, String>{};
+  for (final i in await NetworkInterface.list(type: InternetAddressType.IPv4)) {
+    if (i.addresses.isNotEmpty) result[i.name] = i.addresses.first.address;
+  }
+  return result;
+}
+
+Future<ProcessResult> _runWindows(String exe, List<String> args) =>
+    Process.run(exe, args, runInShell: false);
+
+/// Windows, through `netsh wlan` and PowerShell.
+///
+/// Arguments with spaces are passed as `name=Wi-Fi 2`, which Dart quotes as a
+/// whole (`"name=Wi-Fi 2"`); netsh accepts that form.
+///
+/// The car's DHCP offers itself as gateway and DNS, which Windows takes. The
+/// installer gives dongle adapters a high metric ahead of time; [join] checks
+/// the default route afterwards and fixes or backs out.
+class WindowsCarNetwork implements CarNetwork {
+  WindowsCarNetwork({
+    CommandRunner? run,
+    AddressLookup? addresses,
+    this.pollInterval = const Duration(milliseconds: 500),
+    this.addressTimeout = const Duration(seconds: 20),
+    this.rescanDelay = const Duration(seconds: 3),
+  }) : _run = run ?? _runWindows,
+       _addresses = addresses ?? _interfaceAddresses;
+
+  final CommandRunner _run;
+  final AddressLookup _addresses;
+  final Duration pollInterval;
+  final Duration addressTimeout;
+  final Duration rescanDelay;
+
+  /// Metric given to the car's adapter so it never wins the default route.
+  static const carMetric = 9000;
+
+  Future<String> _exec(String exe, List<String> args) async {
+    final ProcessResult r;
+    try {
+      r = await _run(exe, args);
+    } on ProcessException {
+      throw CarNetworkException('$exe was not found.');
+    }
+    if (r.exitCode != 0) {
+      final err = '${r.stderr}'.trim();
+      final out = '${r.stdout}'.trim();
+      throw CarNetworkException(
+        err.isNotEmpty ? err : (out.isNotEmpty ? out : '$exe failed (${r.exitCode})'),
+      );
+    }
+    return '${r.stdout}';
+  }
+
+  Future<String> _netsh(List<String> args) => _exec('netsh', ['wlan', ...args]);
+
+  Future<String> _powershell(String command) =>
+      _exec('powershell', ['-NoProfile', '-NonInteractive', '-Command', command]);
+
+  /// Splits `netsh` output into `key : value` blocks, a new block at each
+  /// [firstKey]. Keys are trimmed; values keep their inner spaces.
+  static List<Map<String, String>> parseBlocks(String out, String firstKey) {
+    final blocks = <Map<String, String>>[];
+    for (final raw in const LineSplitter().convert(out)) {
+      final i = raw.indexOf(':');
+      if (i < 0) continue;
+      final key = raw.substring(0, i).trim();
+      final value = raw.substring(i + 1).trim();
+      if (key == firstKey) blocks.add({});
+      if (blocks.isNotEmpty) blocks.last.putIfAbsent(key, () => value);
+    }
+    return blocks;
+  }
+
+  /// `netsh wlan show interfaces`: one block per adapter, English output.
+  static List<({String name, String state, String? ssid})> parseInterfaces(String out) => [
+    for (final b in parseBlocks(out, 'Name'))
+      (
+        name: b['Name']!,
+        state: (b['State'] ?? 'disconnected').toLowerCase(),
+        ssid: (b['SSID'] ?? '').isEmpty ? null : b['SSID'],
+      ),
+  ];
+
+  /// The adapter that carries the default route now: lowest route metric plus
+  /// interface metric, the way Windows picks it.
+  Future<String?> defaultRouteAdapter() async {
+    try {
+      final out = await _powershell(
+        r'Get-NetRoute -AddressFamily IPv4 -DestinationPrefix 0.0.0.0/0 | '
+        r'Sort-Object { $_.RouteMetric + (Get-NetIPInterface -InterfaceIndex $_.ifIndex -AddressFamily IPv4).InterfaceMetric } | '
+        r'Select-Object -First 1 -ExpandProperty InterfaceAlias',
+      );
+      final alias = out.trim();
+      return alias.isEmpty ? null : alias;
+    } on CarNetworkException {
+      return null;
+    }
+  }
+
+  @override
+  Future<List<WifiAdapter>> adapters() async {
+    final out = await _netsh(['show', 'interfaces']);
+    var found = parseInterfaces(out);
+    if (found.isEmpty && out.trim().isNotEmpty && !out.contains('There is no')) {
+      // Not English: fall back to PowerShell for names and states.
+      found = await _adaptersFromPowerShell();
+    }
+    final addresses = await _addresses();
+    final route = await defaultRouteAdapter();
+    return [
+      for (final a in found)
+        WifiAdapter(
+          device: a.name,
+          state: a.state,
+          connection: a.ssid == null ? null : NetworkManagerCarNetwork.profileNameFor(a.ssid!),
+          ssid: a.ssid,
+          address: addresses[a.name],
+          carriesDefaultRoute: route != null && route == a.name,
+        ),
+    ];
+  }
+
+  Future<List<({String name, String state, String? ssid})>> _adaptersFromPowerShell() async {
+    final out = await _powershell(
+      r"Get-NetAdapter | Where-Object { $_.PhysicalMediaType -match '802\.11' } | "
+      r"ForEach-Object { $p = Get-NetConnectionProfile -InterfaceIndex $_.ifIndex -ErrorAction SilentlyContinue; "
+      r"'{0}|{1}|{2}' -f $_.Name, $_.Status, $p.Name }",
+    );
+    return [
+      for (final line in const LineSplitter().convert(out))
+        if (line.split('|').length >= 3)
+          () {
+            final f = line.split('|');
+            final up = f[1].trim().toLowerCase() == 'up';
+            return (
+              name: f[0].trim(),
+              state: up ? 'connected' : 'disconnected',
+              ssid: up && f[2].trim().isNotEmpty ? f[2].trim() : null,
+            );
+          }(),
+    ];
+  }
+
+  @override
+  Future<List<ScannedCar>> scan(String device) async {
+    final args = ['show', 'networks', 'interface=$device', 'mode=bssid'];
+    var cars = parseScan(await _netsh(args));
+    if (cars.isEmpty) {
+      // Windows serves cached scans; give it a moment to refresh once.
+      await Future<void>.delayed(rescanDelay);
+      cars = parseScan(await _netsh(args));
+    }
+    return cars;
+  }
+
+  /// `netsh wlan show networks mode=bssid`: cars only, strongest first, one
+  /// per name.
+  static List<ScannedCar> parseScan(String out) {
+    final best = <String, ScannedCar>{};
+    String? ssid;
+    var secured = false;
+    var signal = 0;
+    void flush() {
+      final s = ssid;
+      if (s == null || !isCarSsid(s)) return;
+      final car = ScannedCar(ssid: s, signal: signal, secured: secured);
+      final seen = best[s];
+      if (seen == null || seen.signal < car.signal) best[s] = car;
+    }
+
+    for (final raw in const LineSplitter().convert(out)) {
+      final i = raw.indexOf(':');
+      if (i < 0) continue;
+      final key = raw.substring(0, i).trim();
+      final value = raw.substring(i + 1).trim();
+      if (RegExp(r'^SSID \d+$').hasMatch(key)) {
+        flush();
+        ssid = value;
+        secured = false;
+        signal = 0;
+      } else if (key == 'Authentication') {
+        secured = value.toLowerCase() != 'open';
+      } else if (key == 'Signal') {
+        final v = int.tryParse(value.replaceAll('%', '').trim()) ?? 0;
+        if (v > signal) signal = v;
+      }
+    }
+    flush();
+    return best.values.toList()..sort((a, b) => b.signal.compareTo(a.signal));
+  }
+
+  static String xmlEscape(String s) => s
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&apos;');
+
+  /// A WLAN profile that joins only when asked (`manual`).
+  static String profileXml(String ssid, {String? password}) {
+    final name = NetworkManagerCarNetwork.profileNameFor(ssid);
+    final hex = utf8
+        .encode(ssid)
+        .map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase())
+        .join();
+    final secured = password != null && password.isNotEmpty;
+    final auth = secured
+        ? '<authentication>WPA2PSK</authentication><encryption>AES</encryption>'
+              '<useOneX>false</useOneX></authEncryption>'
+              '<sharedKey><keyType>passPhrase</keyType><protected>false</protected>'
+              '<keyMaterial>${xmlEscape(password)}</keyMaterial></sharedKey>'
+        : '<authentication>open</authentication><encryption>none</encryption>'
+              '<useOneX>false</useOneX></authEncryption>';
+    return '<?xml version="1.0"?>\n'
+        '<WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">'
+        '<name>${xmlEscape(name)}</name>'
+        '<SSIDConfig><SSID><hex>$hex</hex><name>${xmlEscape(ssid)}</name></SSID></SSIDConfig>'
+        '<connectionType>ESS</connectionType>'
+        '<connectionMode>manual</connectionMode>'
+        '<MSM><security><authEncryption>$auth</security></MSM>'
+        '</WLANProfile>\n';
+  }
+
+  /// PowerShell that raises the adapter's metric, run elevated once.
+  static String metricFixCommand(String device) {
+    final alias = device.replaceAll("'", "''");
+    final inner =
+        "Set-NetIPInterface -InterfaceAlias '$alias' -AddressFamily IPv4 -InterfaceMetric $carMetric; "
+        "Set-DnsClient -InterfaceAlias '$alias' -RegisterThisConnectionsAddress \$false";
+    // UTF-16LE base64, so no quoting survives the trip through Start-Process.
+    final bytes = <int>[];
+    for (final c in inner.codeUnits) {
+      bytes..add(c & 0xFF)..add(c >> 8);
+    }
+    return "Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden "
+        "-ArgumentList '-NoProfile','-NonInteractive','-EncodedCommand','${base64.encode(bytes)}'";
+  }
+
+  @override
+  Future<WifiAdapter> join(String device, String ssid, {String? password}) async {
+    if (!isCarSsid(ssid)) {
+      throw CarNetworkException('$ssid is not a car network.');
+    }
+    final before = (await adapters()).where((a) => a.device == device);
+    if (before.isEmpty) throw CarNetworkException('Adapter $device is gone.');
+    final adapter = before.first;
+    if (!adapter.isFree) {
+      throw CarNetworkException(
+        '$device is in use for ${adapter.ssid ?? 'another network'}; pick a free adapter.',
+      );
+    }
+
+    final profile = NetworkManagerCarNetwork.profileNameFor(ssid);
+    final dir = await Directory.systemTemp.createTemp('carcam');
+    try {
+      final file = File('${dir.path}${Platform.pathSeparator}$profile.xml');
+      await file.writeAsString(profileXml(ssid, password: password));
+      await _netsh(['add', 'profile', 'filename=${file.path}', 'interface=$device', 'user=current']);
+    } finally {
+      await dir.delete(recursive: true);
+    }
+
+    // The same car can only be on one adapter.
+    for (final a in await adapters()) {
+      if (a.device != device && a.ssid == ssid) await leave(a.device);
+    }
+
+    await _netsh(['connect', 'name=$profile', 'ssid=$ssid', 'interface=$device']);
+
+    final deadline = DateTime.now().add(addressTimeout);
+    while (!((await _addresses())[device]?.startsWith(carSubnetPrefix) ?? false)) {
+      if (DateTime.now().isAfter(deadline)) {
+        await leave(device);
+        throw CarNetworkException('Joined $ssid but got no car address.');
+      }
+      await Future<void>.delayed(pollInterval);
+    }
+
+    if (await defaultRouteAdapter() == device) {
+      // The car's DHCP made it the gateway. Push it down once, elevated.
+      try {
+        await _powershell(metricFixCommand(device));
+      } on CarNetworkException {
+        // Cancelled or failed: checked below.
+      }
+      if (await defaultRouteAdapter() == device) {
+        await leave(device);
+        throw CarNetworkException('The car tried to become the internet route; disconnected.');
+      }
+    }
+
+    final after = (await adapters()).firstWhere(
+      (a) => a.device == device,
+      orElse: () => throw CarNetworkException('Adapter $device is gone.'),
+    );
+    if (!after.onCar) {
+      throw CarNetworkException('Joined $ssid but got no car address yet.');
+    }
+    return after;
+  }
+
+  @override
+  Future<void> leave(String device) async {
+    try {
+      await _netsh(['disconnect', 'interface=$device']);
     } on CarNetworkException {
       // Already disconnected.
     }
