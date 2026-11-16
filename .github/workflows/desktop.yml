@@ -1,9 +1,12 @@
 name: Desktop
 
-# Builds the desktop app. Artifacts only: no release is published from here.
+# Builds the desktop app (Linux and Windows) as artifacts on every push to
+# `desktop`. A tag `desktop-v*` also publishes a GitHub release with the Linux
+# tarball, CarCamSetup.exe and WiFi-Dongle-Install. Never touches `main`.
 on:
   push:
     branches: [desktop]
+    tags: ['desktop-v*']
     paths-ignore: ['**.md', 'site/**']
   workflow_dispatch:
 
@@ -42,11 +45,66 @@ jobs:
       - name: Package the separate dongle driver installer
         run: |
           out=WiFi-Dongle-Install
-          mkdir -p "$out/Linux"
+          mkdir -p "$out/Linux" "$out/Windows"
           cp packaging/wifi-dongle/README.txt "$out/"
           cp packaging/wifi-dongle/linux/install-aic8800d80.sh "$out/Linux/"
+          cp packaging/wifi-dongle/windows/install-aic8800d80.cmd "$out/Windows/"
           tar czf "$out.tar.gz" "$out"
+          zip -qr "$out.zip" "$out"
       - uses: actions/upload-artifact@v4
         with:
           name: WiFi-Dongle-Install
-          path: WiFi-Dongle-Install.tar.gz
+          path: |
+            WiFi-Dongle-Install.tar.gz
+            WiFi-Dongle-Install.zip
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test
+      - run: flutter build windows --release
+      - run: choco install innosetup -y --no-progress
+      - name: Installer
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9.]+)').Matches[0].Groups[1].Value
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$v" packaging\windows\car-cam.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: car-cam-windows-x64
+          path: packaging/windows/Output/CarCamSetup.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    concurrency: publish
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish the desktop release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          ls -l dist
+          gh release delete "$TAG" --yes || true
+          gh release create "$TAG" \
+            dist/car-cam-linux-x64.tar.gz dist/CarCamSetup.exe \
+            dist/WiFi-Dongle-Install.zip dist/WiFi-Dongle-Install.tar.gz \
+            --title "Car Cam desktop ${TAG#desktop-v} (Linux and Windows)" \
+            --notes-file packaging/RELEASE-NOTES.md \
+            --latest=false
