@@ -20,9 +20,16 @@ Linux (Ubuntu 24.04 tested)
   dongle from CD to Wi-Fi. Then unplug and replug the dongle;
   "nmcli device" should list a new wifi device named wlx...
 
-Windows
-  The driver comes on the dongle itself: plug it in, open the CD drive
-  that appears, and run its setup program. The Windows folder here (when
-  present) holds a copy of that CD's driver for PCs without the dongle's
-  CD; install it with Device Manager > Update driver > Browse, or with
+Windows (10 and 11)
+    Windows\install-aic8800d80.cmd       double-click; it asks for admin rights
+
+  It installs the driver with pnputil: from a driver\ folder next to the
+  script if there is one, otherwise from the dongle's own CD drive (it
+  searches D: to Z: for an .inf that names the AIC8800 / VID_A69C /
+  VID_368B). Then unplug and replug the dongle; "netsh wlan show
+  interfaces" should list a second Wi-Fi adapter.
+
+  The driver itself is the vendor's and is not included. You can also
+  just open the dongle's CD drive and run its setup program, or use
+  Device Manager > Update driver > Browse, or
       pnputil /add-driver <file>.inf /install
