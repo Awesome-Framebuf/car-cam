@@ -54,21 +54,41 @@ Turn on the car, join its Wi-Fi on your phone and open Car Cam. See the
 
 ![Car Cam showing the camera picture, drawn here, with photo and record buttons](docs/images/live.png)
 
-## Linux desktop (preview)
+## Desktop: Linux and Windows (preview)
 
-On the `desktop` branch. Built by `.github/workflows/desktop.yml` as
-`car-cam-linux-x64.tar.gz`. Unpack it and run `./install.sh`. That installs the
-app and, if needed, the driver for AIC8800D80 USB Wi-Fi dongles.
+Download from the [desktop releases](../../releases) (tags `desktop-v…`). Built
+from the `desktop` branch by `.github/workflows/desktop.yml`.
 
-- Use a second Wi-Fi adapter, such as a USB dongle, for the car. Your internet
-  stays where it is: the app joins the car through NetworkManager with
-  `never-default`, and refuses adapters that carry another network.
+You need a **second Wi-Fi adapter** for the car, such as a USB dongle, so your
+internet stays on your normal Wi-Fi or cable. For the AIC8800D80 (AX900) dongle,
+install its driver first with `WiFi-Dongle-Install` (also in the release).
+
+**Linux** (x64, NetworkManager):
+
+```sh
+tar xzf car-cam-linux-x64.tar.gz
+cd car-cam-linux-x64
+./install.sh            # asks for your password; --uninstall removes it
+```
+
+Start **Car Cam** from the app menu, or run `./bundle/car_cam` without installing.
+
+**Windows** (10/11, x64): run `CarCamSetup.exe` (unsigned: SmartScreen > More
+info > Run anyway), then start **Car Cam** from the Start menu. Allow private
+networks if the firewall asks. The installer adds no driver.
+
+- The app joins the car without ever making it the internet route (Linux:
+  NetworkManager `never-default`; Windows: a high interface metric, checked
+  after joining), and refuses adapters that carry another network.
 - The car picker scans for networks starting with `757-`, remembers cars, and
   lets you name them.
 - Photos go to `Pictures/Car Cam`, videos (Motion-JPEG `.avi`) to `Videos/Car Cam`.
+- Full screen: the button on the video, a double-click, or F11; Esc leaves it.
 - VLC, OBS or a browser can open the live video at
   `http://localhost:8808/car.mjpg`. If that port is taken the app uses the next
   one and shows the address. A single picture is at `/car.jpg`.
+- Tested on a real car on Linux. The Windows build is so far only built and
+  unit-tested in CI.
 
 ## Develop
 
