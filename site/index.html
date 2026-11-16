@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Car Cam</title>
-<meta name="description" content="A free video viewer for the NQD 1:64 Desktop Drift camera car, for Android and iPhone.">
+<meta name="description" content="A free video viewer for the NQD 1:64 Desktop Drift camera car, for Android, iPhone, Windows and Linux.">
 <style>
 :root {
   --bg: #0e1116; --panel: #181d25; --line: #2a313c; --text: #f2f4f7; --dim: #a7b0bd;
@@ -43,9 +43,18 @@ h2 { font-size: 28px; margin: 0 0 8px; letter-spacing: -.01em; }
 .tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--accent-ink);
   background: var(--accent); border-radius: 6px; padding: 2px 8px; margin-left: 6px; vertical-align: 2px; }
 .meta { color: var(--dim); font-size: 14px; margin: 0 0 14px; }
-.qrs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.qr { text-align: center; font-size: 14px; }
-.qr img { width: 100%; max-width: 190px; margin: 0 auto 8px; border-radius: 8px; background: #fff; }
+.four { grid-template-columns: repeat(4, 1fr); }
+.three { grid-template-columns: repeat(3, 1fr); }
+.plat { display: flex; flex-direction: column; }
+.plat .head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.plat .head img { width: 44px; height: 44px; flex: none; }
+.plat .get { min-height: 196px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; font-size: 14px; }
+.plat .get .qrimg { width: 100%; max-width: 150px; border-radius: 8px; background: #fff; }
+.plat .get .btn { width: 100%; text-align: center; font-size: 14px; padding: 12px 8px; overflow-wrap: anywhere; }
+.plat ol { padding-left: 20px; margin: 14px 0 0; font-size: 14px; color: var(--dim); }
+.plat ol li { margin-bottom: 6px; }
+code { font-size: .92em; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 0 4px; overflow-wrap: anywhere; }
+.small { font-size: 14px; }
 .note { color: var(--dim); font-size: 14px; margin: 14px 0 0; }
 figure { margin: 0; }
 figure img { border-radius: 10px; width: 100%; border: 1px solid var(--line); }
@@ -60,8 +69,12 @@ figcaption { color: var(--dim); font-size: 14px; margin-top: 8px; }
 ol.steps { padding-left: 20px; margin: 0; }
 ol.steps li { margin-bottom: 8px; }
 footer { color: var(--dim); font-size: 14px; padding: 28px 0 40px; border-top: 1px solid var(--line); }
+@media (max-width: 960px) {
+  .four, .three { grid-template-columns: repeat(2, 1fr); }
+}
 @media (max-width: 760px) {
-  .hero, .two { grid-template-columns: 1fr; }
+  .hero, .two, .four, .three { grid-template-columns: 1fr; }
+  .plat .get { min-height: 0; }
 }
 </style>
 </head>
@@ -70,7 +83,7 @@ footer { color: var(--dim); font-size: 14px; padding: 28px 0 40px; border-top: 1
   <nav>
     <b>Car Cam</b>
     <a href="#download">Download</a>
-    <a href="#app">The app</a>
+    <a href="#app">Screenshots</a>
     <a href="#car">The car</a>
     <a href="#videos">Videos</a>
     <a href="https://github.com/Awesome-Framebuf/car-cam">GitHub</a>
@@ -79,9 +92,9 @@ footer { color: var(--dim); font-size: 14px; padding: 28px 0 40px; border-top: 1
   <header class="hero">
     <div>
       <h1>See what your tiny car sees.</h1>
-      <p class="lead">A free viewer for the camera on the NQD 1:64 Desktop Drift car. Open it and the picture fills your screen, with photos and video recording built in. No account, and no driving controls.</p>
+      <p class="lead">A free viewer for the camera on the NQD 1:64 Desktop Drift car, on Android, iPhone, Windows and Linux. Open it and the picture fills your screen, with photos and video recording built in. No account, and no driving controls.</p>
       <div class="btns">
-        <a class="btn" href="#download">Download <span data-latest>v2.0.0</span></a>
+        <a class="btn" href="#download">Download</a>
         <a class="btn alt" href="https://github.com/Awesome-Framebuf/car-cam/blob/main/docs/CONNECTING.md">Connection guide</a>
       </div>
     </div>
@@ -90,41 +103,63 @@ footer { color: var(--dim); font-size: 14px; padding: 28px 0 40px; border-top: 1
 
   <section id="download">
     <h2>Download</h2>
-    <p class="sub">Scan a code with your phone's camera, or tap a link.</p>
-    <div class="grid two" id="versions">
-      <article class="card">
-        <h3>v2.0.0 <span class="tag">Latest</span></h3>
-        <p class="meta">Live video, photos, recording and a connection guide</p>
-        <div class="qrs">
-          <div class="qr"><img src="images/qr/v2.0.0-android.png" width="270" height="270" alt="QR code for the v2.0.0 Android app"><a href="https://github.com/Awesome-Framebuf/car-cam/releases/download/v2.0.0/CarCam.apk">Android APK</a></div>
-          <div class="qr"><img src="images/qr/v2.0.0-iphone.png" width="294" height="294" alt="QR code for the v2.0.0 iPhone file"><a href="https://github.com/Awesome-Framebuf/car-cam/releases/download/v2.0.0/CarCam-unsigned.ipa">iPhone IPA</a></div>
-        </div>
+    <p class="sub">Live video, photos and recording on every platform. On a phone, scan the code with your camera or tap the link.</p>
+    <div class="grid four" id="platforms">
+      <article class="card plat">
+        <div class="head"><img src="images/icons/android.svg" width="44" height="44" alt=""><h3>Android</h3></div>
+        <div class="get"><img class="qrimg" src="images/qr/v2.0.0-android.png" width="270" height="270" alt="QR code for the Android app"><a class="btn" href="https://github.com/Awesome-Framebuf/car-cam/releases/download/v2.0.0/CarCam.apk">CarCam.apk</a></div>
+        <ol>
+          <li>Scan the code or tap the button.</li>
+          <li>Open the file. Allow installs from your browser if asked.</li>
+          <li>If it refuses, uninstall an older Car Cam first.</li>
+        </ol>
       </article>
-      <article class="card">
-        <h3>v1.0.0</h3>
-        <p class="meta">Live video only</p>
-        <div class="qrs">
-          <div class="qr"><img src="images/qr/v1.0.0-android.png" width="270" height="270" alt="QR code for the v1.0.0 Android app"><a href="https://github.com/Awesome-Framebuf/car-cam/releases/download/v1.0.0/CarCam.apk">Android APK</a></div>
-          <div class="qr"><img src="images/qr/v1.0.0-iphone.png" width="294" height="294" alt="QR code for the v1.0.0 iPhone file"><a href="https://github.com/Awesome-Framebuf/car-cam/releases/download/v1.0.0/CarCam-unsigned.ipa">iPhone IPA</a></div>
-        </div>
+      <article class="card plat">
+        <div class="head"><img src="images/icons/iphone.svg" width="44" height="44" alt=""><h3>iPhone</h3></div>
+        <div class="get"><img class="qrimg" src="images/qr/v2.0.0-iphone.png" width="294" height="294" alt="QR code for the iPhone file"><a class="btn" href="https://github.com/Awesome-Framebuf/car-cam/releases/download/v2.0.0/CarCam-unsigned.ipa">CarCam-unsigned.ipa</a></div>
+        <ol>
+          <li>Download the file.</li>
+          <li>Sign and install it with AltStore or Sideloadly (free Apple ID, re-sign every 7 days).</li>
+          <li>The code only downloads it. It can't install unsigned.</li>
+        </ol>
+      </article>
+      <article class="card plat">
+        <div class="head"><img src="images/icons/windows.svg" width="44" height="44" alt=""><h3>Windows</h3></div>
+        <div class="get"><a class="btn" href="https://github.com/Awesome-Framebuf/car-cam/releases/download/desktop-v2.0.0/CarCamSetup.exe">CarCamSetup.exe</a><span class="meta" style="margin:0">Windows 10 / 11, 64-bit · <b>Preview</b></span></div>
+        <ol>
+          <li>Run <code>CarCamSetup.exe</code>.</li>
+          <li>If SmartScreen warns (the installer isn't signed): <b>More info &gt; Run anyway</b>.</li>
+          <li>Start Car Cam from the Start menu. Allow private networks if the firewall asks.</li>
+        </ol>
+      </article>
+      <article class="card plat">
+        <div class="head"><img src="images/icons/linux.svg" width="44" height="44" alt=""><h3>Linux</h3></div>
+        <div class="get"><a class="btn" href="https://github.com/Awesome-Framebuf/car-cam/releases/download/desktop-v2.0.0/car-cam-linux-x64.tar.gz">car-cam-linux-x64.tar.gz</a><span class="meta" style="margin:0">64-bit, tested on Ubuntu 24.04 · <b>Preview</b></span></div>
+        <ol>
+          <li>Unpack it: <code>tar xzf car-cam-linux-x64.tar.gz</code></li>
+          <li>In the new <code>car-cam-linux-x64</code> folder, run <code>./install.sh</code></li>
+          <li>Start Car Cam from the app menu. Needs NetworkManager (standard on Ubuntu).</li>
+        </ol>
       </article>
     </div>
-    <p class="note" id="release-line"><a href="https://github.com/Awesome-Framebuf/car-cam/releases">All releases on GitHub</a></p>
-    <p class="note"><strong>iPhone:</strong> the code only downloads the file. iPhones install it after you sign it with a tool like AltStore or Sideloadly. <strong>Android:</strong> you may need to allow installs from your browser, and to uninstall an older version first.</p>
+    <p class="note">The computer apps are a <strong>preview</strong>. The Linux app has been used with the real car. The Windows app has so far only been built and tested in GitHub Actions, not on a real PC. Both are the camera app only and work with any Wi-Fi adapter, including the one built into your computer.</p>
+    <p class="note" id="release-line"><a href="https://github.com/Awesome-Framebuf/car-cam/releases/tag/v2.0.0">Android and iPhone release</a> · <a href="https://github.com/Awesome-Framebuf/car-cam/releases/tag/desktop-v2.0.0">Windows and Linux release</a> · <a href="https://github.com/Awesome-Framebuf/car-cam/releases">All releases</a></p>
   </section>
 
   <section id="start">
     <h2>Three steps</h2>
     <ol class="steps">
       <li>Turn on the car and wait a few seconds.</li>
-      <li>Join the car's Wi-Fi on your phone.</li>
-      <li>Open Car Cam. The video starts by itself.</li>
+      <li><strong>Phone:</strong> join the car's Wi-Fi, then open Car Cam. <strong>Computer:</strong> open Car Cam, press <b>Scan for cars</b>, then <b>Connect</b>.</li>
+      <li>The video starts by itself. Photo and record buttons sit next to the picture.</li>
     </ol>
+    <p class="note"><strong>Computer with one Wi-Fi adapter</strong> (most laptops): Car Cam asks first, then switches it from your home Wi-Fi to the car. The internet is off until you disconnect. With a second adapter, pick that one and your internet stays on. F11 or a double-click gives full screen, and VLC can show the stream at <code>http://localhost:8808/car.mjpg</code>.</p>
     <p class="note">Stuck? The <a href="https://github.com/Awesome-Framebuf/car-cam/blob/main/docs/CONNECTING.md">connection guide</a> covers the usual fixes.</p>
   </section>
 
   <section id="app">
-    <h2>Inside the app</h2>
+    <h2>Screenshots</h2>
+    <h3>Phone</h3>
     <p class="sub">Captured from the real app running in our automated tests. The picture comes from a simulated car, so it's a labelled test image and not real footage.</p>
     <div class="grid two" id="app-shots">
       <figure><img src="images/app/iphone-guide.jpg" width="1100" height="506" loading="lazy" alt="The connection guide appears until the car answers."><figcaption>The connection guide appears until the car answers. <em>iPhone simulator.</em></figcaption></figure>
@@ -133,6 +168,13 @@ footer { color: var(--dim); font-size: 14px; padding: 28px 0 40px; border-top: 1
       <figure><img src="images/app/iphone-recording.jpg" width="1100" height="506" loading="lazy" alt="A red timer runs while you record."><figcaption>A red timer runs while you record. <em>iPhone simulator.</em></figcaption></figure>
       <figure><img src="images/app/android-recording.jpg" width="640" height="320" loading="lazy" alt="Recording on Android."><figcaption>Recording on Android. <em>Android 13 emulator.</em></figcaption></figure>
       <figure><img src="images/app/android-saved.jpg" width="640" height="320" loading="lazy" alt="The finished video goes to your gallery."><figcaption>The finished video goes to your gallery. <em>Android 13 emulator.</em></figcaption></figure>
+    </div>
+    <h3 style="margin-top:32px">Computer <span class="tag">Simulated</span></h3>
+    <p class="sub">Mockups, rendered from the desktop app's real screens. The car list is pretend and the picture is a drawn road labelled "Simulated picture". Real screenshots will replace them.</p>
+    <div class="grid three" id="desktop-shots">
+      <figure><img src="images/desktop/car-picker.jpg" width="1100" height="619" loading="lazy" alt="Desktop car picker, simulated mockup"><figcaption>Pick a Wi-Fi adapter and a car. <em>Simulated mockup.</em></figcaption></figure>
+      <figure><img src="images/desktop/live.jpg" width="1100" height="619" loading="lazy" alt="Desktop live view, simulated mockup"><figcaption>Live view with photo and record. <em>Simulated mockup.</em></figcaption></figure>
+      <figure><img src="images/desktop/full-screen.jpg" width="1100" height="619" loading="lazy" alt="Desktop full screen, simulated mockup"><figcaption>Full screen. <em>Simulated mockup.</em></figcaption></figure>
     </div>
   </section>
 
@@ -163,6 +205,11 @@ footer { color: var(--dim); font-size: 14px; padding: 28px 0 40px; border-top: 1
     <p class="note">More to browse on TikTok: <a href="https://www.tiktok.com/discover/mini-fpv-rc-car">mini FPV RC cars</a> and <a href="https://www.tiktok.com/discover/tiny-rc-cars-with-camera">tiny RC cars with cameras</a>.</p>
   </section>
 
+  <section id="dongle" class="small">
+    <h3>Optional: BT+AX900 USB dongle (only if you have this exact adapter)</h3>
+    <p class="meta">Skip this unless you own the BT+AX900 (AIC8800D80) USB Wi-Fi + Bluetooth dongle and it doesn't work yet. Car Cam doesn't need it. The <a href="https://github.com/Awesome-Framebuf/car-cam/releases/tag/desktop-v2.0.0">desktop release</a> has <code>WiFi-Dongle-Install.zip</code> / <code>WiFi-Dongle-Install.tar.gz</code>: driver install scripts for that dongle only. The Windows driver itself belongs to the vendor and isn't included.</p>
+  </section>
+
   <footer>
     An independent project for owners of the car, not affiliated with or endorsed by the manufacturer. Video thumbnails and players belong to their creators.
     <a href="https://github.com/Awesome-Framebuf/car-cam">Source on GitHub</a>.
@@ -180,25 +227,6 @@ document.querySelectorAll('.video').forEach(function (b) {
     b.replaceChildren(f);
   });
 });
-// Keep the version current from GitHub. The page above already works without this.
-fetch('https://api.github.com/repos/Awesome-Framebuf/car-cam/releases')
-  .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
-  .then(function (rs) {
-    var v = rs.filter(function (r) { return /^v\d/.test(r.tag_name) && !r.draft; })
-      .sort(function (a, b) { return b.tag_name.localeCompare(a.tag_name, undefined, { numeric: true }); })[0];
-    if (!v) return;
-    document.querySelectorAll('[data-latest]').forEach(function (e) { e.textContent = v.tag_name; });
-    var d = new Date(v.published_at).toLocaleDateString(undefined, { dateStyle: 'medium' });
-    var line = document.getElementById('release-line');
-    line.textContent = 'Latest on GitHub: ' + v.tag_name + ', published ' + d + '. ';
-    var a = document.createElement('a');
-    a.href = v.html_url; a.textContent = 'Release page';
-    line.append(a, ' · ');
-    var all = document.createElement('a');
-    all.href = 'https://github.com/Awesome-Framebuf/car-cam/releases'; all.textContent = 'All releases';
-    line.append(all);
-  })
-  .catch(function () {});
 </script>
 </body>
 </html>

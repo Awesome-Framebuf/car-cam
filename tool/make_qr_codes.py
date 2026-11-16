@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes a QR code per release file to docs/images/qr/. Needs: pip install segno
 
-Usage: tool/make_qr_codes.py v1.0.0 v2.0.0
+Usage: tool/make_qr_codes.py v2.0.0
 """
 import pathlib
 import sys
