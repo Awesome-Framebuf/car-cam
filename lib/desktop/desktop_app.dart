@@ -153,7 +153,12 @@ class _DesktopHomeState extends State<DesktopHome> {
       if (_session == null && adapter.isNotEmpty && _joining == null) {
         final a = adapter.first;
         await _store.remember(a.ssid!, a.device);
-        await _openSession(label: _store.find(a.ssid!)!.name, device: a.device, ssid: a.ssid);
+        await _openSession(
+          label: _store.find(a.ssid!)!.name,
+          device: a.device,
+          ssid: a.ssid,
+          address: a.address,
+        );
       }
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
@@ -179,11 +184,25 @@ class _DesktopHomeState extends State<DesktopHome> {
 
   String? _sessionSsid;
 
-  Future<void> _openSession({required String label, String? device, String? ssid}) async {
+  Future<void> _openSession({
+    required String label,
+    String? device,
+    String? ssid,
+    String? address,
+  }) async {
     await _closeSession();
     final s =
         widget.sessionFactory?.call(label: label, device: device, bridge: _bridge) ??
-        CarSession(label: label, device: device, bridge: _bridge);
+        CarSession(
+          label: label,
+          device: device,
+          // Windows: every car is 192.168.169.1, so send from the car
+          // adapter's own address. Linux pins by device instead.
+          localAddress: Platform.isWindows && device != null && address != null
+              ? InternetAddress(address)
+              : null,
+          bridge: _bridge,
+        );
     _session = s;
     _sessionSsid = ssid;
     _sub = s.frames.listen(_onFrame);
@@ -225,7 +244,12 @@ class _DesktopHomeState extends State<DesktopHome> {
       await _closeSession();
       final adapter = await _net.join(device, car.ssid, password: password);
       final saved = await _store.remember(car.ssid, device);
-      await _openSession(label: saved.name, device: adapter.device, ssid: car.ssid);
+      await _openSession(
+        label: saved.name,
+        device: adapter.device,
+        ssid: car.ssid,
+        address: adapter.address,
+      );
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {

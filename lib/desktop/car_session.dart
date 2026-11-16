@@ -57,7 +57,9 @@ class CarSession {
   }) : folders = folders ?? MediaFolders.defaults(),
        client = client ??
            CarVideoClient(
-             bindDevice: device,
+             // SO_BINDTODEVICE is Linux only. Windows pins by the adapter's
+             // own address instead.
+             bindDevice: Platform.isLinux ? device : null,
              localAddress: localAddress,
              // The busy ports are fixed numbers, so only one session can
              // listen. Only the unpinned session tries.
